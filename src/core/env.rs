@@ -1,6 +1,9 @@
+use crate::intervals::IntervalTree;
+
 use super::gc::{Context, ObjectMap, Rto, Slot};
 use super::object::{LispBuffer, Object, OpenBuffer, Symbol, WithLifetime};
 use anyhow::{anyhow, Result};
+use rune_core::hashmap::IndexMap;
 use rune_macros::Trace;
 
 mod stack;
@@ -22,6 +25,8 @@ pub(crate) struct Env<'a> {
     #[no_trace]
     pub(crate) current_buffer: Option<OpenBuffer<'a>>,
     pub(crate) stack: LispStack<'a>,
+    #[no_trace]
+    pub buffer_textprops: IndexMap<Object<'a>, IntervalTree<'a>>,
 }
 
 // RootedEnv created by #[derive(Trace)]
@@ -95,6 +100,10 @@ impl<'a> RootedEnv<'a> {
     }
 
     pub(crate) fn set_buffer(&mut self, buffer: &LispBuffer) -> Result<()> {
+    pub fn buffer_textprops(&mut self, buffer: Object<'a>) -> &mut IntervalTree<'a> {
+        self.buffer_textprops.entry(buffer).or_insert(IntervalTree::new())
+    }
+
         if let Some(current) = &self.current_buffer {
             if buffer == current {
                 return Ok(());
