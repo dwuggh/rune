@@ -12,7 +12,7 @@ use std::{cell::Cell, fmt};
 /// be copy or clone.
 #[derive(PartialEq, Eq)]
 #[repr(transparent)]
-pub(crate) struct ObjCell(Cell<Object<'static>>);
+pub struct ObjCell(Cell<Object<'static>>);
 
 impl std::hash::Hash for ObjCell {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -21,7 +21,7 @@ impl std::hash::Hash for ObjCell {
 }
 
 impl ObjCell {
-    pub(crate) fn get(&self) -> Object<'_> {
+    pub fn get(&self) -> Object<'_> {
         unsafe { self.0.get().with_lifetime() }
     }
 
@@ -66,7 +66,7 @@ impl Trace for ObjCell {
 /// cell.
 #[derive(PartialEq)]
 #[repr(transparent)]
-pub(crate) struct MutObjCell(ObjCell);
+pub struct MutObjCell(ObjCell);
 
 impl std::ops::Deref for MutObjCell {
     type Target = ObjCell;
@@ -77,7 +77,7 @@ impl std::ops::Deref for MutObjCell {
 }
 
 impl MutObjCell {
-    pub(crate) fn set(&self, value: Object) {
+    pub fn set(&self, value: Object) {
         unsafe {
             self.0 .0.set(value.with_lifetime());
         }

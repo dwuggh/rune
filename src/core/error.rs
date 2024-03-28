@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 
 /// The function or form has the wrong number of arguments.
 #[derive(Debug, PartialEq)]
-pub(crate) struct ArgError {
+pub struct ArgError {
     expect: u16,
     actual: u16,
     name: String,
@@ -18,13 +18,13 @@ impl Display for ArgError {
 }
 
 impl ArgError {
-    pub(crate) fn new(expect: u16, actual: u16, name: impl AsRef<str>) -> ArgError {
+    pub fn new(expect: u16, actual: u16, name: impl AsRef<str>) -> ArgError {
         Self { expect, actual, name: name.as_ref().to_owned() }
     }
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) enum Type {
+pub enum Type {
     Int,
     Char,
     Cons,
@@ -44,7 +44,7 @@ pub(crate) enum Type {
 
 /// Error provided if object was the wrong type
 #[derive(Debug, PartialEq)]
-pub(crate) struct TypeError {
+pub struct TypeError {
     expect: Type,
     actual: Type,
     print: String,
@@ -61,7 +61,7 @@ impl Display for TypeError {
 
 impl TypeError {
     /// Get a type error from an object.
-    pub(crate) fn new<'ob, T>(expect: Type, obj: T) -> Self
+    pub fn new<'ob, T>(expect: Type, obj: T) -> Self
     where
         T: Into<super::object::ObjectType<'ob>>,
     {

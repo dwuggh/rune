@@ -17,7 +17,7 @@ use std::{
 };
 
 #[derive(Eq)]
-pub(crate) struct LispVecInner {
+pub struct LispVecInner {
     is_const: bool,
     inner: Cell<*mut [ObjCell]>,
 }
@@ -28,7 +28,7 @@ macro_attr! {
     /// default. However with the [try_mut](LispVecInner::try_mut) method, you can obtain a mutable view
     /// into this slice.
     #[derive(PartialEq, Eq, Trace, NewtypeDebug!, NewtypeDisplay!, NewtypeDeref!, NewtypeMarkable!)]
-    pub(crate) struct LispVec(GcHeap<LispVecInner>);
+    pub struct LispVec(GcHeap<LispVecInner>);
 }
 
 impl PartialEq for LispVecInner {
@@ -44,7 +44,7 @@ impl LispVec {
         Self(GcHeap::new(LispVecInner::new(ptr, constant), constant))
     }
 
-    pub(crate) fn to_vec(&self) -> Vec<Object> {
+    pub fn to_vec(&self) -> Vec<Object> {
         // SAFETY: ObjCell and GcObj have the same representation.
         let obj_slice = unsafe { &*(addr_of!(*self.inner.get()) as *const [Object]) };
         obj_slice.to_vec()
@@ -145,7 +145,7 @@ pub(crate) struct RecordBuilder<'ob>(pub(crate) GcVec<'ob, Object<'ob>>);
 
 macro_attr! {
     #[derive(PartialEq, Eq, Trace, NewtypeDeref!, NewtypeMarkable!)]
-    pub(crate) struct Record(GcHeap<LispVecInner>);
+    pub struct Record(GcHeap<LispVecInner>);
 }
 
 impl<'new> CloneIn<'new, &'new Self> for Record {

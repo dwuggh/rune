@@ -1,10 +1,13 @@
 //! The core modules that define the primitive types and functionality of the
 //! language.
 #[macro_use]
-pub(crate) mod cons;
-pub(crate) mod env;
+pub mod cons;
+pub mod env;
 #[macro_use]
-pub(crate) mod error;
-pub(crate) mod object;
+pub mod error;
+pub mod object;
 #[macro_use]
-pub(crate) mod gc;
+pub mod gc;
+
+pub use object::Object;
+pub use gc::Context;

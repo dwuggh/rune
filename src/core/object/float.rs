@@ -12,7 +12,7 @@ macro_attr! {
     /// actually use that field in a match. So we need a float wrapper that
     /// implements that trait.
     #[derive(PartialEq, NewtypeDeref!, NewtypeMarkable!, Trace)]
-    pub(crate) struct LispFloat(GcHeap<f64>);
+    pub struct LispFloat(GcHeap<f64>);
 }
 
 impl LispFloat {

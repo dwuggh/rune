@@ -893,7 +893,7 @@ fn fetch_bytecode(_object: Object) {
     // TODO: Implement
 }
 
-pub(crate) fn call<'ob>(
+pub fn call<'ob>(
     func: &Rto<&ByteFn>,
     arg_cnt: usize,
     name: &str,

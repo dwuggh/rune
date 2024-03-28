@@ -18,13 +18,13 @@ use rune_macros::defun;
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug)]
-pub(crate) struct EvalError {
+pub struct EvalError {
     backtrace: Vec<Box<str>>,
-    pub(crate) error: ErrorType,
+    pub error: ErrorType,
 }
 
 #[derive(Debug)]
-pub(crate) enum ErrorType {
+pub enum ErrorType {
     Throw(u32),
     Signal(u32),
     Err(anyhow::Error),
@@ -44,38 +44,38 @@ impl Display for EvalError {
 }
 
 impl EvalError {
-    pub(crate) fn new_error(error: anyhow::Error) -> Self {
+    pub fn new_error(error: anyhow::Error) -> Self {
         Self { backtrace: Vec::new(), error: ErrorType::Err(error) }
     }
 
-    pub(crate) fn signal(error_symbol: Object, data: Object, env: &mut Rt<Env>) -> Self {
+    pub fn signal(error_symbol: Object, data: Object, env: &mut Rt<Env>) -> Self {
         Self {
             backtrace: Vec::new(),
             error: ErrorType::Signal(env.set_exception(error_symbol, data)),
         }
     }
 
-    pub(crate) fn throw(tag: Object, data: Object, env: &mut Rt<Env>) -> Self {
+    pub fn throw(tag: Object, data: Object, env: &mut Rt<Env>) -> Self {
         Self { backtrace: Vec::new(), error: ErrorType::Throw(env.set_exception(tag, data)) }
     }
 
-    pub(crate) fn new(error: impl Into<Self>) -> Self {
+    pub fn new(error: impl Into<Self>) -> Self {
         error.into()
     }
 
-    pub(crate) fn with_trace(error: anyhow::Error, name: &str, args: &[Rto<Object>]) -> Self {
+    pub fn with_trace(error: anyhow::Error, name: &str, args: &[Rto<Object>]) -> Self {
         let display = display_slice(args);
         let trace = format!("{name} {display}").into_boxed_str();
         Self { backtrace: vec![trace], error: ErrorType::Err(error) }
     }
 
-    pub(crate) fn add_trace(mut self, name: &str, args: &[Rto<Object>]) -> Self {
+    pub fn add_trace(mut self, name: &str, args: &[Rto<Object>]) -> Self {
         let display = display_slice(args);
         self.backtrace.push(format!("{name} {display}").into_boxed_str());
         self
     }
 
-    pub(crate) fn print_backtrace(&self) {
+    pub fn print_backtrace(&self) {
         println!("BEGIN_BACKTRACE");
         for (i, x) in self.backtrace.iter().enumerate() {
             println!("{i}: {x}");
@@ -126,10 +126,10 @@ impl From<std::convert::Infallible> for EvalError {
     }
 }
 
-pub(crate) type EvalResult<'ob> = Result<Object<'ob>, EvalError>;
+pub type EvalResult<'ob> = Result<Object<'ob>, EvalError>;
 
 #[defun]
-pub(crate) fn apply<'ob>(
+pub fn apply<'ob>(
     function: &Rto<Function>,
     arguments: ArgSlice,
     env: &mut Rt<Env>,
@@ -155,7 +155,7 @@ pub(crate) fn apply<'ob>(
 }
 
 #[defun]
-pub(crate) fn funcall<'ob>(
+pub fn funcall<'ob>(
     function: &Rto<Function>,
     arguments: ArgSlice,
     env: &mut Rt<Env>,
@@ -236,7 +236,7 @@ fn run_hook_with_args<'ob>(
 }
 
 #[defun]
-pub(crate) fn autoload_do_load<'ob>(
+pub fn autoload_do_load<'ob>(
     fundef: &Rto<Object>,
     funname: Option<&Rto<Gc<Symbol>>>,
     macro_only: Option<&Rto<Object>>,
@@ -289,7 +289,7 @@ fn autoload<'ob>(
 }
 
 #[defun]
-pub(crate) fn macroexpand<'ob>(
+pub fn macroexpand<'ob>(
     form: &Rto<Object>,
     environment: Option<&Rto<Object>>,
     cx: &'ob mut Context,
@@ -419,7 +419,7 @@ fn set_default<'ob>(
 }
 
 impl Rto<Function<'_>> {
-    pub(crate) fn call<'ob>(
+    pub fn call<'ob>(
         &self,
         frame: &mut CallFrame<'_, '_>,
         name: Option<&str>,
@@ -469,7 +469,7 @@ impl Rto<Function<'_>> {
     }
 }
 
-pub(crate) fn add_trace(err: anyhow::Error, name: &str, args: &[Rto<Object>]) -> EvalError {
+pub fn add_trace(err: anyhow::Error, name: &str, args: &[Rto<Object>]) -> EvalError {
     match err.downcast::<EvalError>() {
         Ok(err) => err.add_trace(name, args),
         Err(e) => EvalError::with_trace(e, name, args),

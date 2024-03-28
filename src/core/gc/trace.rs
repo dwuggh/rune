@@ -2,11 +2,11 @@ use super::super::object::RawObj;
 use crate::core::object::{Gc, Object};
 use rune_core::hashmap::{HashMap, HashSet};
 
-pub(crate) trait Trace {
+pub trait Trace {
     fn trace(&self, state: &mut GcState);
 }
 
-pub(crate) struct GcState {
+pub struct GcState {
     stack: Vec<RawObj>,
     pub(in crate::core) to_space: bumpalo::Bump,
 }

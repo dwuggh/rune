@@ -20,20 +20,20 @@ mod symbol;
 mod tagged;
 mod vector;
 
-pub(crate) use buffer::*;
+pub use buffer::*;
 pub(super) use cell::*;
-pub(crate) use convert::*;
-pub(crate) use float::*;
-pub(crate) use func::*;
-pub(crate) use hashtable::*;
-pub(crate) use string::*;
-pub(crate) use symbol::*;
-pub(crate) use tagged::*;
-pub(crate) use vector::*;
+pub use convert::*;
+pub use float::*;
+pub use func::*;
+pub use hashtable::*;
+pub use string::*;
+pub use symbol::*;
+pub use tagged::*;
+pub use vector::*;
 
 use std::fmt::Write as _;
 
-pub(crate) fn display_slice<T: std::fmt::Display>(slice: &[T]) -> String {
+pub fn display_slice<T: std::fmt::Display>(slice: &[T]) -> String {
     let mut buffer = String::new();
     buffer.push('[');
     for x in slice {

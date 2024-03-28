@@ -64,7 +64,7 @@ impl HeaderData {
 /// A block of memory allocated on the heap that is managed by the garbage collector.
 #[repr(C)]
 #[derive(Debug)]
-pub(crate) struct GcHeap<T: ?Sized> {
+pub struct GcHeap<T: ?Sized> {
     header: UnsafeCell<GcHeader>,
     data: T,
 }

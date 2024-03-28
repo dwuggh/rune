@@ -14,7 +14,7 @@ type Result<T> = std::result::Result<T, Error>;
 
 /// Errors that can occur during reading a sexp from a string
 #[derive(PartialEq, Debug, Copy, Clone)]
-pub(crate) enum Error {
+pub enum Error {
     MissingCloseParen(usize),
     MissingCloseBracket(usize),
     MissingStringDel(usize),
@@ -89,7 +89,7 @@ impl Error {
         }
     }
 
-    pub(crate) fn update_pos(&mut self, offset: usize) {
+    pub fn update_pos(&mut self, offset: usize) {
         if let Some(pos) = self.mut_pos() {
             *pos += offset;
         }
@@ -505,7 +505,7 @@ impl<'a, 'ob> Reader<'a, 'ob> {
 
 /// read a lisp object from `slice`. Return the object and index of next
 /// remaining character in the slice.
-pub(crate) fn read<'ob>(slice: &str, cx: &'ob Context) -> Result<(Object<'ob>, usize)> {
+pub fn read<'ob>(slice: &str, cx: &'ob Context) -> Result<(Object<'ob>, usize)> {
     let mut reader = Reader { tokens: Tokenizer::new(slice), cx };
     match reader.tokens.next() {
         Some(t) => reader.read_sexp(t).map(|x| (x, reader.tokens.cur_pos())),

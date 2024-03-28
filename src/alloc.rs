@@ -8,7 +8,7 @@ use anyhow::{ensure, Result};
 use rune_macros::defun;
 
 #[defun]
-pub(crate) fn list<'ob>(objects: &[Object<'ob>], cx: &'ob Context) -> Object<'ob> {
+pub fn list<'ob>(objects: &[Object<'ob>], cx: &'ob Context) -> Object<'ob> {
     let mut head = NIL;
     for object in objects.iter().rev() {
         head = Cons::new(*object, head, cx).into();
@@ -19,7 +19,7 @@ pub(crate) fn list<'ob>(objects: &[Object<'ob>], cx: &'ob Context) -> Object<'ob
 /// Convert a function to closure by replacing the first N elements with their
 /// closure values.
 #[defun]
-pub(crate) fn make_closure<'ob>(
+pub fn make_closure<'ob>(
     prototype: &ByteFn,
     closure_vars: &[Object<'ob>],
     cx: &'ob Context,
@@ -43,7 +43,7 @@ pub(crate) fn make_closure<'ob>(
 
 #[defun]
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn make_byte_code<'ob>(
+pub fn make_byte_code<'ob>(
     arglist: u64,
     byte_code: &'ob ByteString,
     constants: &'ob LispVec,

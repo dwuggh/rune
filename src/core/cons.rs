@@ -8,12 +8,12 @@ use std::fmt::{self, Debug, Display, Write};
 
 mod iter;
 
-pub(crate) use iter::*;
+pub use iter::*;
 
 mod sealed {
     use super::*;
     #[derive(Eq)]
-    pub(crate) struct ConsInner {
+    pub struct ConsInner {
         pub(super) mutable: bool,
         pub(super) car: ObjCell,
         pub(super) cdr: ObjCell,
@@ -23,9 +23,9 @@ mod sealed {
 pub(in crate::core) use sealed::ConsInner;
 
 #[derive(PartialEq, Eq, Trace)]
-pub(crate) struct Cons(GcHeap<ConsInner>);
+pub struct Cons(GcHeap<ConsInner>);
 
-NewtypeMarkable!(() pub(crate) struct Cons());
+NewtypeMarkable!(() pub struct Cons());
 
 impl std::ops::Deref for Cons {
     type Target = GcHeap<ConsInner>;
@@ -51,7 +51,7 @@ impl Cons {
     }
 
     /// Create a new cons cell
-    pub(crate) fn new<'ob, T, Tx, U, Ux, const C: bool>(
+    pub fn new<'ob, T, Tx, U, Ux, const C: bool>(
         car: T,
         cdr: U,
         cx: &'ob Block<C>,
@@ -69,7 +69,7 @@ impl Cons {
     }
 
     /// Create a new cons cell with the cdr set to nil
-    pub(crate) fn new1<'ob, T, Tx, const C: bool>(car: T, cx: &'ob Block<C>) -> &'ob Self
+    pub fn new1<'ob, T, Tx, const C: bool>(car: T, cx: &'ob Block<C>) -> &'ob Self
     where
         T: IntoObject<Out<'ob> = Tx>,
         Gc<Tx>: Into<Object<'ob>>,
@@ -85,15 +85,15 @@ impl Cons {
 }
 
 impl ConsInner {
-    pub(crate) fn car(&self) -> Object {
+    pub fn car(&self) -> Object {
         self.car.get()
     }
 
-    pub(crate) fn cdr(&self) -> Object {
+    pub fn cdr(&self) -> Object {
         self.cdr.get()
     }
 
-    pub(crate) fn set_car(&self, new_car: Object) -> Result<()> {
+    pub fn set_car(&self, new_car: Object) -> Result<()> {
         if self.mutable {
             unsafe { self.car.as_mut().set(new_car) }
             Ok(())
@@ -102,7 +102,7 @@ impl ConsInner {
         }
     }
 
-    pub(crate) fn set_cdr(&self, new_cdr: Object) -> Result<()> {
+    pub fn set_cdr(&self, new_cdr: Object) -> Result<()> {
         if self.mutable {
             unsafe { self.cdr.as_mut().set(new_cdr) }
             Ok(())

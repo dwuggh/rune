@@ -19,7 +19,7 @@ use text_buffer::Buffer as TextBuffer;
 
 /// A Handle to an open buffer. Only one thread can hold this at a time.
 #[derive(Debug)]
-pub(crate) struct OpenBuffer<'a> {
+pub struct OpenBuffer<'a> {
     data: MutexGuard<'a, Option<BufferData>>,
     back_ref: &'a LispBuffer,
 }
@@ -36,17 +36,17 @@ impl<'a> OpenBuffer<'a> {
     }
 
     // TODO: we shouldn't leave it empty
-    pub(crate) fn kill(&mut self) -> bool {
+    pub fn kill(&mut self) -> bool {
         let killed = self.data.is_some();
         *self.data = None;
         killed
     }
 
-    pub(crate) fn lisp_buffer<'ob>(&self, cx: &'ob Context) -> &'ob LispBuffer {
+    pub fn lisp_buffer<'ob>(&self, cx: &'ob Context) -> &'ob LispBuffer {
         cx.bind(self.back_ref)
     }
 
-    pub(crate) fn insert(&mut self, arg: Object) -> Result<()> {
+    pub fn insert(&mut self, arg: Object) -> Result<()> {
         match arg.untag() {
             ObjectType::Int(i) => {
                 let Ok(u_32) = i.try_into() else { bail!("{i} is an invalid char") };
@@ -59,7 +59,7 @@ impl<'a> OpenBuffer<'a> {
         Ok(())
     }
 
-    pub(crate) fn delete(&mut self, beg: usize, end: usize) {
+    pub fn delete(&mut self, beg: usize, end: usize) {
         self.get_mut().text.delete_range(beg, end);
     }
 }
@@ -95,13 +95,13 @@ impl DerefMut for OpenBuffer<'_> {
 /// The actual data of the buffer. Buffer local variables will be stored here
 /// eventually.
 #[derive(Debug)]
-pub(crate) struct BufferData {
-    pub(crate) name: String,
-    pub(crate) text: TextBuffer,
+pub struct BufferData {
+    pub name: String,
+    pub text: TextBuffer,
 }
 
 #[derive(Debug)]
-pub(crate) struct LispBufferInner {
+pub struct LispBufferInner {
     text_buffer: Mutex<Option<BufferData>>,
 }
 
@@ -109,16 +109,16 @@ macro_attr! {
 /// A lisp handle to a buffer. This is a just a reference type and does not give
 /// access to the contents until it is locked and a `OpenBuffer` is returned.
     #[derive(PartialEq, Eq, Trace, NewtypeDebug!, NewtypeDisplay!, NewtypeDeref!, NewtypeMarkable!)]
-    pub(crate) struct LispBuffer(GcHeap<LispBufferInner>);
+    pub struct LispBuffer(GcHeap<LispBufferInner>);
 }
 
 impl LispBuffer {
-    pub(crate) fn create(name: String, block: &Block<true>) -> &LispBuffer {
+    pub fn create(name: String, block: &Block<true>) -> &LispBuffer {
         let buffer = unsafe { Self::new(name, block) };
         block.objects.alloc(buffer)
     }
 
-    pub(crate) unsafe fn new(name: String, _: &Block<true>) -> LispBuffer {
+    pub unsafe fn new(name: String, _: &Block<true>) -> LispBuffer {
         let new = LispBufferInner {
             text_buffer: Mutex::new(Some(BufferData { name, text: TextBuffer::new() })),
         };

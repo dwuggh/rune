@@ -30,7 +30,7 @@ use std::{
 ///
 /// On top of scrubbing the lifetimes, this trait can also do a transformation
 /// of the underlying type for convenience, similar to calling `Into::into`.
-pub(crate) trait IntoRoot<T> {
+pub trait IntoRoot<T> {
     unsafe fn into_root(self) -> T;
 }
 
@@ -99,7 +99,7 @@ impl<'a> IntoRoot<Slot<Object<'a>>> for i64 {
 // Represents an object T rooted on the Stack. This will remove the the object
 // from the root set when dropped.
 #[doc(hidden)]
-pub(crate) struct __StackRoot<'rt, T> {
+pub struct __StackRoot<'rt, T> {
     data: &'rt mut Rt<T>,
     root_set: &'rt RootSet,
 }
@@ -128,7 +128,7 @@ impl<T: Display> Display for __StackRoot<'_, T> {
 // That could result in calling `mem::forget` on the root, which would
 // invalidate the stack property of the root set.
 impl<'rt, T: Trace> __StackRoot<'rt, T> {
-    pub(crate) unsafe fn new(data: &'rt mut T, root_set: &'rt RootSet) -> __StackRoot<'rt, T> {
+    pub unsafe fn new(data: &'rt mut T, root_set: &'rt RootSet) -> __StackRoot<'rt, T> {
         let dyn_ptr = data as &mut dyn Trace as *mut dyn Trace;
         // We are using this transmute to dissociate the `dyn Trace` from the T.
         // Otherwise rust tries to require us to add a 'static bound. We don't
@@ -257,7 +257,7 @@ impl<T> Slot<T> {
         *self.inner.get() = new
     }
 
-    pub(crate) fn new(val: T) -> Self {
+    pub fn new(val: T) -> Self {
         Slot { inner: UnsafeCell::new(val) }
     }
 }
@@ -350,7 +350,7 @@ impl<T> Rt<T> {
         &mut self.inner as *mut T
     }
 
-    pub(crate) fn bind_ref<'a, 'ob>(&'a self, _: &'ob Context) -> &'a <T as WithLifetime<'ob>>::Out
+    pub fn bind_ref<'a, 'ob>(&'a self, _: &'ob Context) -> &'a <T as WithLifetime<'ob>>::Out
     where
         T: WithLifetime<'ob>,
     {
@@ -358,7 +358,7 @@ impl<T> Rt<T> {
         unsafe { &*self.inner_ptr().cast::<<T as WithLifetime<'ob>>::Out>() }
     }
 
-    pub(crate) fn bind_mut<'a, 'ob>(
+    pub fn bind_mut<'a, 'ob>(
         &'a mut self,
         _: &'ob Context,
     ) -> &'a mut <T as WithLifetime<'ob>>::Out
@@ -369,7 +369,7 @@ impl<T> Rt<T> {
         unsafe { &mut *self.inner_mut_ptr().cast::<<T as WithLifetime<'ob>>::Out>() }
     }
 
-    pub(crate) fn set<U: IntoRoot<T>>(&mut self, item: U) {
+    pub fn set<U: IntoRoot<T>>(&mut self, item: U) {
         // SAFETY: we drop the old type so it never exposed and take the new
         // rooted type and replace it.
         unsafe { *self.inner_mut() = item.into_root() }
@@ -377,7 +377,7 @@ impl<T> Rt<T> {
 }
 
 impl<T> Rt<Slot<T>> {
-    pub(crate) fn bind<'ob>(&self, _: &'ob Context) -> <T as WithLifetime<'ob>>::Out
+    pub fn bind<'ob>(&self, _: &'ob Context) -> <T as WithLifetime<'ob>>::Out
     where
         T: WithLifetime<'ob> + Copy,
     {
@@ -385,14 +385,14 @@ impl<T> Rt<Slot<T>> {
         unsafe { self.inner().get().with_lifetime() }
     }
 
-    pub(crate) unsafe fn bind_unchecked<'ob>(&'ob self) -> <T as WithLifetime<'ob>>::Out
+    pub unsafe fn bind_unchecked<'ob>(&'ob self) -> <T as WithLifetime<'ob>>::Out
     where
         T: WithLifetime<'ob> + Copy,
     {
         self.inner().get().with_lifetime()
     }
 
-    pub(crate) fn bind_slice<'brw, 'ob, U>(
+    pub fn bind_slice<'brw, 'ob, U>(
         slice: &'brw [Rt<Slot<Gc<T>>>],
         _: &'ob Context,
     ) -> &'brw [Gc<U>]
@@ -408,7 +408,7 @@ impl<T> Rt<Slot<T>> {
 
 impl<T> Rt<Slot<Gc<T>>> {
     /// Calls [untag](Untag::untag_erased) on the tagged Gc pointer
-    pub(crate) fn untag<'ob, U>(&self, cx: &'ob Context) -> U
+    pub fn untag<'ob, U>(&self, cx: &'ob Context) -> U
     where
         Gc<T>: WithLifetime<'ob, Out = Gc<U>> + Copy,
         Gc<U>: Untag<U>,
@@ -417,7 +417,7 @@ impl<T> Rt<Slot<Gc<T>>> {
     }
 
     /// Like `try_into`, but needed to due no specialization
-    pub(crate) fn try_as<U, E>(&self) -> Result<&Rt<Slot<Gc<U>>>, E>
+    pub fn try_as<U, E>(&self) -> Result<&Rt<Slot<Gc<U>>>, E>
     where
         Gc<T>: TryInto<Gc<U>, Error = E> + Copy,
     {
@@ -437,7 +437,7 @@ impl TryFrom<&Rt<Slot<Object<'_>>>> for usize {
 
 impl<T> Rt<Slot<Gc<T>>> {
     /// Like `try_into().bind(cx)`, but needed to due no specialization
-    pub(crate) fn bind_as<'ob, U, E>(&self, _cx: &'ob Context) -> Result<U, E>
+    pub fn bind_as<'ob, U, E>(&self, _cx: &'ob Context) -> Result<U, E>
     where
         Gc<T>: WithLifetime<'ob> + Copy,
         <Gc<T> as WithLifetime<'ob>>::Out: TryInto<U, Error = E> + Copy,
@@ -446,7 +446,7 @@ impl<T> Rt<Slot<Gc<T>>> {
     }
 
     /// Like `Into`, but needed to due no specialization
-    pub(crate) fn cast<U>(&self) -> &Rt<Slot<Gc<U>>>
+    pub fn cast<U>(&self) -> &Rt<Slot<Gc<U>>>
     where
         Gc<T>: Into<Gc<U>> + Copy,
     {
@@ -456,7 +456,7 @@ impl<T> Rt<Slot<Gc<T>>> {
 
     // TODO: Find a way to remove this method. We should never need to guess
     // if something is cons
-    pub(crate) fn as_cons(&self) -> &Rt<Slot<Gc<&Cons>>> {
+    pub fn as_cons(&self) -> &Rt<Slot<Gc<&Cons>>> {
         match self.inner().as_obj().untag() {
             crate::core::object::ObjectType::Cons(_) => unsafe {
                 &*(self as *const Self).cast::<Rt<Slot<Gc<&Cons>>>>()
@@ -473,7 +473,7 @@ impl From<&Rt<Slot<Object<'_>>>> for Option<()> {
 }
 
 impl<'a> Rt<Slot<Object<'a>>> {
-    pub(crate) fn try_as_option<T, E>(&self) -> Result<Option<&Rt<Slot<Gc<T>>>>, E>
+    pub fn try_as_option<T, E>(&self) -> Result<Option<&Rt<Slot<Gc<T>>>>, E>
     where
         Object<'a>: TryInto<Gc<T>, Error = E>,
     {
@@ -511,11 +511,11 @@ impl IntoObject for &mut Rt<Slot<Object<'_>>> {
 }
 
 impl Rt<Slot<&Cons>> {
-    pub(crate) fn car<'ob>(&self, cx: &'ob Context) -> Object<'ob> {
+    pub fn car<'ob>(&self, cx: &'ob Context) -> Object<'ob> {
         self.bind(cx).car()
     }
 
-    pub(crate) fn cdr<'ob>(&self, cx: &'ob Context) -> Object<'ob> {
+    pub fn cdr<'ob>(&self, cx: &'ob Context) -> Object<'ob> {
         self.bind(cx).cdr()
     }
 }
@@ -573,40 +573,40 @@ impl<T, const N: usize> AsRef<[Rt<T>]> for Rt<[T; N]> {
 }
 
 impl<T> Rt<Vec<T>> {
-    // This is not safe to expose pub(crate) because you could call pop and get
+    // This is not safe to expose pub because you could call pop and get
     // an owned Rt
     fn as_mut_ref(&mut self) -> &mut Vec<Rt<T>> {
         // SAFETY: `Rt<T>` has the same memory layout as `T`.
         unsafe { &mut *(self as *mut Self).cast::<Vec<Rt<T>>>() }
     }
 
-    pub(crate) fn push<U: IntoRoot<T>>(&mut self, item: U) {
+    pub fn push<U: IntoRoot<T>>(&mut self, item: U) {
         self.inner_mut().push(unsafe { item.into_root() });
     }
 
-    pub(crate) fn truncate(&mut self, len: usize) {
+    pub fn truncate(&mut self, len: usize) {
         self.inner_mut().truncate(len);
     }
 
-    pub(crate) fn pop(&mut self) {
+    pub fn pop(&mut self) {
         self.inner_mut().pop();
     }
 
-    pub(crate) fn swap_remove(&mut self, index: usize) {
+    pub fn swap_remove(&mut self, index: usize) {
         self.inner_mut().swap_remove(index);
     }
 
-    pub(crate) fn reserve(&mut self, additional: usize) {
+    pub fn reserve(&mut self, additional: usize) {
         self.inner_mut().reserve(additional);
     }
 
-    pub(crate) fn capacity(&self) -> usize {
+    pub fn capacity(&self) -> usize {
         self.inner().capacity()
     }
 }
 
 impl<T> Rt<Vec<T>> {
-    pub(crate) fn extend_from_slice<U: IntoRoot<T> + Copy>(&mut self, src: &[U]) {
+    pub fn extend_from_slice<U: IntoRoot<T> + Copy>(&mut self, src: &[U]) {
         // TODO: Slot fix extend_from_slice
         let inner = self.inner_mut();
         for x in src {
@@ -616,7 +616,7 @@ impl<T> Rt<Vec<T>> {
 }
 
 impl<T: Clone> Rt<Vec<T>> {
-    pub(crate) fn extend_from_within(&mut self, src: impl RangeBounds<usize>) {
+    pub fn extend_from_within(&mut self, src: impl RangeBounds<usize>) {
         self.inner_mut().extend_from_within(src);
     }
 }
@@ -660,7 +660,7 @@ impl<T, I: SliceIndex<[Rt<T>]>> IndexMut<I> for Rt<Vec<T>> {
 // It is not safe to Deref into the inner IndexMap type because we will be
 // constructing a mutable reference during garbage collection. So we have to
 // ensure that there cannot exist a &IndexMap to the same location.
-pub(crate) struct ObjectMap<K, V>(UnsafeCell<IndexMap<K, V>>);
+pub struct ObjectMap<K, V>(UnsafeCell<IndexMap<K, V>>);
 
 impl<K, V> Default for ObjectMap<K, V> {
     fn default() -> Self {
@@ -682,25 +682,25 @@ where
         unsafe { &mut *self.inner_mut().0.get() }
     }
 
-    pub(crate) fn insert<Kx: IntoRoot<K>, Vx: IntoRoot<V>>(&mut self, k: Kx, v: Vx) {
+    pub fn insert<Kx: IntoRoot<K>, Vx: IntoRoot<V>>(&mut self, k: Kx, v: Vx) {
         unsafe {
             self.as_mut().insert(k.into_root(), v.into_root());
         }
     }
 
-    pub(crate) fn get<Q: IntoRoot<K>>(&self, k: Q) -> Option<&Rt<V>> {
+    pub fn get<Q: IntoRoot<K>>(&self, k: Q) -> Option<&Rt<V>> {
         use std::ptr::from_ref;
         let inner = unsafe { &*from_ref(self.as_ref()).cast::<IndexMap<K, Rt<V>>>() };
         inner.get(unsafe { &k.into_root() })
     }
 
-    pub(crate) fn get_mut<Q: IntoRoot<K>>(&mut self, k: Q) -> Option<&mut Rt<V>> {
+    pub fn get_mut<Q: IntoRoot<K>>(&mut self, k: Q) -> Option<&mut Rt<V>> {
         use std::ptr::from_mut;
         let inner = unsafe { &mut *from_mut(self.as_mut()).cast::<IndexMap<K, Rt<V>>>() };
         inner.get_mut(unsafe { &k.into_root() })
     }
 
-    pub(crate) fn remove<Q: IntoRoot<K>>(&mut self, k: Q) {
+    pub fn remove<Q: IntoRoot<K>>(&mut self, k: Q) {
         self.as_mut().swap_remove(unsafe { &k.into_root() });
     }
 }

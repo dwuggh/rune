@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
 mod sealed {
     use super::{AtomicBool, AtomicPtr, SymbolName};
 
-    pub(crate) struct SymbolCellInner {
+    pub struct SymbolCellInner {
         pub(super) name: SymbolName,
         // We can't use AtomicCell due to this issue:
         // https://github.com/crossbeam-rs/crossbeam/issues/748
@@ -32,7 +32,7 @@ use super::Function;
 /// [`SymbolMap::set_func`](`crate::core::env::SymbolMap::set_func`) and they
 /// can only be replaced atomically. In order to garbage collect the function we
 /// need to halt all running threads. This has not been implemented yet.
-pub(crate) type SymbolCell = GcHeap<SymbolCellInner>;
+pub type SymbolCell = GcHeap<SymbolCellInner>;
 
 #[derive(Debug)]
 enum SymbolName {
@@ -41,7 +41,7 @@ enum SymbolName {
 }
 
 #[derive(PartialEq, Eq, Copy, Clone)]
-pub(crate) struct Symbol<'a> {
+pub struct Symbol<'a> {
     // This is *NOT* a pointer but an offset from the start of the symbol table
     data: *const u8,
     marker: PhantomData<&'a SymbolCell>,
@@ -56,7 +56,7 @@ impl std::ops::Deref for Symbol<'_> {
 }
 
 impl<'a> Symbol<'a> {
-    pub(crate) fn get(self) -> &'a SymbolCell {
+    pub fn get(self) -> &'a SymbolCell {
         unsafe {
             let base = BUILTIN_SYMBOLS.as_ptr().addr();
             let ptr = self.data.map_addr(|x| x.wrapping_add(base)).cast::<SymbolCell>();
@@ -88,11 +88,11 @@ impl<'a> Symbol<'a> {
         Self { data: ptr, marker: PhantomData }
     }
 
-    pub(crate) fn make_special(self) {
+    pub fn make_special(self) {
         self.special.store(true, Ordering::Release);
     }
 
-    pub(crate) fn is_special(self) -> bool {
+    pub fn is_special(self) -> bool {
         self.special.load(Ordering::Acquire)
     }
 }
@@ -196,7 +196,7 @@ impl<'ob> Symbol<'ob> {
         SymbolCell::new_normal(name, block).into_obj(block).untag()
     }
 
-    pub(crate) fn new_uninterned<const C: bool>(name: &str, block: &'ob Block<C>) -> Self {
+    pub fn new_uninterned<const C: bool>(name: &str, block: &'ob Block<C>) -> Self {
         SymbolCell::new_uninterned(name, block).into_obj(block).untag()
     }
 }
@@ -277,24 +277,24 @@ impl SymbolCell {
 impl SymbolCellInner {
     const NULL: *mut u8 = std::ptr::null_mut();
 
-    pub(crate) fn name(&self) -> &str {
+    pub fn name(&self) -> &str {
         match &self.name {
             SymbolName::Interned(x) => x,
             SymbolName::Uninterned(x) => x,
         }
     }
 
-    pub(crate) fn interned(&self) -> bool {
+    pub fn interned(&self) -> bool {
         matches!(self.name, SymbolName::Interned(_))
     }
 
     #[inline(always)]
     /// Check if the symbol is constant like nil, t, or :keyword
-    pub(crate) fn is_const(&self) -> bool {
+    pub fn is_const(&self) -> bool {
         self.func.is_none()
     }
 
-    pub(crate) fn has_func(&self) -> bool {
+    pub fn has_func(&self) -> bool {
         match &self.func {
             Some(func) => !func.load(Ordering::Acquire).is_null(),
             None => false,
@@ -312,12 +312,12 @@ impl SymbolCellInner {
         None
     }
 
-    pub(crate) fn func<'a>(&self, _cx: &'a Context) -> Option<Function<'a>> {
+    pub fn func<'a>(&self, _cx: &'a Context) -> Option<Function<'a>> {
         self.get().map(|x| unsafe { x.with_lifetime() })
     }
 
     /// Follow the chain of symbols to find the function at the end, if any.
-    pub(crate) fn follow_indirect<'ob>(&self, cx: &'ob Context) -> Option<Function<'ob>> {
+    pub fn follow_indirect<'ob>(&self, cx: &'ob Context) -> Option<Function<'ob>> {
         let func = self.func(cx)?;
         match func.untag() {
             FunctionType::Symbol(sym) => sym.follow_indirect(cx),
@@ -339,7 +339,7 @@ impl SymbolCellInner {
         Ok(())
     }
 
-    pub(crate) fn unbind_func(&self) {
+    pub fn unbind_func(&self) {
         if let Some(func) = &self.func {
             func.store(Self::NULL, Ordering::Release);
         }

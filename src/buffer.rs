@@ -22,7 +22,7 @@ fn buffers() -> &'static Mutex<HashMap<String, &'static LispBuffer>> {
 }
 
 #[defun]
-pub(crate) fn set_buffer<'ob>(
+pub fn set_buffer<'ob>(
     buffer_or_name: Object<'ob>,
     env: &mut Rt<Env>,
     cx: &'ob Context,
@@ -66,7 +66,7 @@ fn buffer_name(buffer: Option<Gc<&LispBuffer>>, env: &Rt<Env>) -> Option<String>
 }
 
 #[defun]
-pub(crate) fn get_buffer_create<'ob>(
+pub fn get_buffer_create<'ob>(
     buffer_or_name: Object<'ob>,
     _inhibit_buffer_hooks: Option<Object>,
     cx: &'ob Context,
@@ -97,7 +97,7 @@ pub(crate) fn get_buffer_create<'ob>(
 }
 
 #[defun]
-pub(crate) fn get_buffer<'ob>(
+pub fn get_buffer<'ob>(
     buffer_or_name: Object<'ob>,
     cx: &'ob Context,
 ) -> Result<Object<'ob>> {

@@ -20,11 +20,11 @@ use rune_macros::Trace;
 use std::fmt::{self, Debug, Display};
 
 #[derive(PartialEq, Eq, Trace)]
-pub(crate) struct ByteFnPrototype {
+pub struct ByteFnPrototype {
     #[no_trace]
-    pub(crate) args: FnArgs,
+    pub args: FnArgs,
     #[no_trace]
-    pub(crate) depth: usize,
+    pub depth: usize,
     #[no_trace]
     pub(super) op_codes: Box<[u8]>,
     pub(super) constants: Vec<Slot<Object<'static>>>,
@@ -34,7 +34,7 @@ macro_attr! {
     /// A function implemented in lisp. Note that all functions are byte compiled,
     /// so this contains the byte-code representation of the function.
     #[derive(PartialEq, Eq, NewtypeDeref!, NewtypeMarkable!, Trace)]
-    pub(crate) struct ByteFn(GcHeap<ByteFnPrototype>);
+    pub struct ByteFn(GcHeap<ByteFnPrototype>);
 }
 
 define_unbox!(ByteFn, Func, &'ob ByteFn);
@@ -47,7 +47,7 @@ impl ByteFn {
     // block as the bytecode function. Otherwise they will be collected and we
     // will have a dangling pointer. Also this type must immediatly be put into
     // the GC heap, because holding it past garbage collections is unsafe.
-    pub(crate) unsafe fn make(
+    pub unsafe fn make(
         op_codes: &[u8],
         consts: Vec<Object>,
         args: FnArgs,
@@ -65,17 +65,17 @@ impl ByteFn {
 }
 
 impl ByteFnPrototype {
-    pub(crate) fn codes(&self) -> &[u8] {
+    pub fn codes(&self) -> &[u8] {
         &self.op_codes
     }
 
-    pub(crate) fn consts<'ob>(&'ob self) -> &'ob [Object<'ob>] {
+    pub fn consts<'ob>(&'ob self) -> &'ob [Object<'ob>] {
         unsafe {
             std::mem::transmute::<&'ob [Slot<Object<'static>>], &'ob [Object<'ob>]>(&self.constants)
         }
     }
 
-    pub(crate) fn index<'ob>(&self, index: usize, cx: &'ob Context) -> Option<Object<'ob>> {
+    pub fn index<'ob>(&self, index: usize, cx: &'ob Context) -> Option<Object<'ob>> {
         match index {
             0 => Some((self.args.into_arg_spec() as i64).into()),
             1 => Some(cx.add(self.codes().to_vec())),
@@ -85,7 +85,7 @@ impl ByteFnPrototype {
         }
     }
 
-    pub(crate) const fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         4
     }
 }
@@ -120,19 +120,19 @@ impl Debug for ByteFn {
 
 /// Argument requirments to a function.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Default)]
-pub(crate) struct FnArgs {
+pub struct FnArgs {
     /// a &rest argument.
-    pub(crate) rest: bool,
+    pub rest: bool,
     /// minimum required arguments.
-    pub(crate) required: u16,
+    pub required: u16,
     /// &optional arguments.
-    pub(crate) optional: u16,
+    pub optional: u16,
     /// If this function is advised.
-    pub(crate) advice: bool,
+    pub advice: bool,
 }
 
 impl FnArgs {
-    pub(crate) fn from_arg_spec(spec: u64) -> Result<Self> {
+    pub fn from_arg_spec(spec: u64) -> Result<Self> {
         // The spec is an integer of the form NNNNNNNRMMMMMMM where the 7bit
         // MMMMMMM specifies the minimum number of arguments, the 7-bit NNNNNNN
         // specifies the maximum number of arguments (ignoring &rest) and the R
@@ -149,7 +149,7 @@ impl FnArgs {
         Ok(FnArgs { required, optional, rest, advice: false })
     }
 
-    pub(crate) fn into_arg_spec(self) -> u64 {
+    pub fn into_arg_spec(self) -> u64 {
         let mut spec = self.required;
         let max = self.required + self.optional;
         spec |= max << 8;
@@ -161,7 +161,7 @@ impl FnArgs {
     /// If a function has 3 required args and 2 optional, and it is called with
     /// 4 arguments, then 1 will be returned. Indicating that 1 additional `nil`
     /// argument should be added to the stack.
-    pub(crate) fn num_of_fill_args(self, args: u16, name: &str) -> Result<u16> {
+    pub fn num_of_fill_args(self, args: u16, name: &str) -> Result<u16> {
         if args < self.required {
             bail!(ArgError::new(self.required, args, name));
         }
@@ -173,19 +173,19 @@ impl FnArgs {
     }
 }
 
-pub(crate) type BuiltInFn =
+pub type BuiltInFn =
     for<'ob> fn(usize, &mut Rt<Env>, &'ob mut Context) -> Result<Object<'ob>>;
 
 #[derive(Eq)]
-pub(crate) struct SubrFn {
-    pub(crate) subr: BuiltInFn,
-    pub(crate) args: FnArgs,
-    pub(crate) name: &'static str,
+pub struct SubrFn {
+    pub subr: BuiltInFn,
+    pub args: FnArgs,
+    pub name: &'static str,
 }
 define_unbox!(SubrFn, Func, &'ob SubrFn);
 
 impl SubrFn {
-    pub(crate) fn call<'ob>(
+    pub fn call<'ob>(
         &self,
         arg_cnt: usize,
         env: &mut Rt<Env>,

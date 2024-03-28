@@ -4,7 +4,7 @@ use crate::core::gc::Rto;
 use anyhow::Result;
 
 #[derive(Clone)]
-pub(crate) struct ConsIter<'ob> {
+pub struct ConsIter<'ob> {
     cons: Option<Result<&'ob Cons, ConsError>>,
     fast: Option<&'ob Cons>,
 }
@@ -16,7 +16,7 @@ impl<'ob> ConsIter<'ob> {
         Self { cons: cons.map(Ok), fast: cons }
     }
 
-    pub(crate) fn fallible(self) -> fallible_iterator::Convert<Self> {
+    pub fn fallible(self) -> fallible_iterator::Convert<Self> {
         fallible_iterator::convert(self)
     }
 }
@@ -56,20 +56,20 @@ fn advance(cons: Option<&Cons>) -> Option<&Cons> {
 /// An iterator over the elements (car's) of a list. This iterator will detect circular
 /// lists and non-nil list terminators.
 #[derive(Clone)]
-pub(crate) struct ElemIter<'ob>(ConsIter<'ob>);
+pub struct ElemIter<'ob>(ConsIter<'ob>);
 
 impl ElemIter<'_> {
-    pub(crate) fn len(&self) -> Result<usize, ConsError> {
+    pub fn len(&self) -> Result<usize, ConsError> {
         use fallible_iterator::FallibleIterator;
         self.clone().fallible().count()
     }
 
     /// Take the rest of the list as a cons.
-    pub(crate) fn rest(&self) -> Result<Option<&Cons>, ConsError> {
+    pub fn rest(&self) -> Result<Option<&Cons>, ConsError> {
         self.0.cons.transpose()
     }
 
-    pub(crate) fn fallible(self) -> fallible_iterator::Convert<Self> {
+    pub fn fallible(self) -> fallible_iterator::Convert<Self> {
         fallible_iterator::convert(self)
     }
 }
@@ -83,7 +83,7 @@ impl<'ob> Iterator for ElemIter<'ob> {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub(crate) enum ConsError {
+pub enum ConsError {
     NonNilCdr,
     CircularList,
 }
@@ -99,13 +99,13 @@ impl std::fmt::Display for ConsError {
 
 impl std::error::Error for ConsError {}
 
-pub(crate) struct ElemStreamIter<'rt> {
+pub struct ElemStreamIter<'rt> {
     elem: Option<&'rt mut Rto<Object<'static>>>,
     cons: Option<Result<&'rt mut Rto<&'static Cons>, ConsError>>,
 }
 
 impl<'rt> ElemStreamIter<'rt> {
-    pub(crate) fn new(
+    pub fn new(
         elem: Option<&'rt mut Rto<Object<'static>>>,
         cons: Option<&'rt mut Rto<&'static Cons>>,
     ) -> Self {
@@ -147,18 +147,18 @@ impl<'rt> fallible_streaming_iterator::FallibleStreamingIterator for ElemStreamI
 }
 
 impl<'rt> ElemStreamIter<'rt> {
-    pub(crate) fn is_empty(&self) -> bool {
+    pub fn is_empty(&self) -> bool {
         self.cons.is_none()
     }
 }
 
 #[allow(clippy::multiple_inherent_impl)]
 impl Cons {
-    pub(crate) fn elements(&self) -> ElemIter {
+    pub fn elements(&self) -> ElemIter {
         ElemIter(self.conses())
     }
 
-    pub(crate) fn conses(&self) -> ConsIter {
+    pub fn conses(&self) -> ConsIter {
         ConsIter::new(Some(self))
     }
 }
@@ -174,11 +174,11 @@ impl<'ob> IntoIterator for &'ob Cons {
 }
 
 impl<'ob> List<'ob> {
-    pub(crate) fn elements(self) -> ElemIter<'ob> {
+    pub fn elements(self) -> ElemIter<'ob> {
         ElemIter(self.conses())
     }
 
-    pub(crate) fn conses(self) -> ConsIter<'ob> {
+    pub fn conses(self) -> ConsIter<'ob> {
         match self.untag() {
             ListType::Nil => ConsIter::new(None),
             ListType::Cons(cons) => ConsIter::new(Some(cons)),
@@ -197,7 +197,7 @@ impl<'ob> IntoIterator for List<'ob> {
 }
 
 impl<'ob> Object<'ob> {
-    pub(crate) fn as_list(self) -> Result<ElemIter<'ob>> {
+    pub fn as_list(self) -> Result<ElemIter<'ob>> {
         let list: List = self.try_into()?;
         Ok(list.elements())
     }

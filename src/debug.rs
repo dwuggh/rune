@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 static FLAG: AtomicBool = AtomicBool::new(false);
 
-pub(crate) fn debug_enabled() -> bool {
+pub fn debug_enabled() -> bool {
     if cfg!(test) {
         true
     } else {
@@ -11,11 +11,11 @@ pub(crate) fn debug_enabled() -> bool {
     }
 }
 
-pub(crate) fn enable_debug() {
+pub fn enable_debug() {
     FLAG.store(true, Ordering::Release);
 }
 
-pub(crate) fn disable_debug() {
+pub fn disable_debug() {
     FLAG.store(false, Ordering::Release);
 }
 

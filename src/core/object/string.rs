@@ -11,7 +11,7 @@ use std::ops::Deref;
 
 macro_attr! {
     #[derive(NewtypeMarkable!, Trace)]
-    pub(crate) struct LispString(GcHeap<LispStringInner>);
+    pub struct LispString(GcHeap<LispStringInner>);
 }
 
 struct LispStringInner(Cell<*mut str>);
@@ -83,7 +83,7 @@ impl Trace for Vec<u8> {
 }
 
 impl LispString {
-    pub(crate) fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.chars().count()
     }
 }
@@ -114,11 +114,11 @@ impl<'a> From<&'a LispString> for &'a [u8] {
 
 macro_attr! {
     #[derive(PartialEq, Eq, NewtypeDeref!, NewtypeMarkable!, Trace)]
-    pub(crate) struct ByteString(GcHeap<Vec<u8>>);
+    pub struct ByteString(GcHeap<Vec<u8>>);
 }
 
 impl ByteString {
-    pub(crate) fn new(string: Vec<u8>, constant: bool) -> Self {
+    pub fn new(string: Vec<u8>, constant: bool) -> Self {
         Self(GcHeap::new(string, constant))
     }
 }

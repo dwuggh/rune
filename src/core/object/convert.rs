@@ -98,7 +98,7 @@ impl<'ob> TryFrom<Object<'ob>> for Option<()> {
 /// without the need to allocate a new slice. We ensure that the two
 /// types have the exact same representation, so that no writes
 /// actually need to be performed.
-pub(crate) fn try_from_slice<'brw, 'ob, T, E>(
+pub fn try_from_slice<'brw, 'ob, T, E>(
     slice: &'brw [Object<'ob>],
 ) -> Result<&'brw [Gc<T>], E>
 where

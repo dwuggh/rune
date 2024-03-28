@@ -14,7 +14,7 @@ use std::ops::{Deref, DerefMut, Index, IndexMut, RangeBounds, RangeTo};
 /// [push_frame](RootedLispStack::push_frame) and
 /// [pop_frame](RootedLispStack::pop_frame) respectively.
 #[derive(Debug, Default, Trace)]
-pub(crate) struct LispStack<'a> {
+pub struct LispStack<'a> {
     vec: Vec<Slot<Object<'a>>>,
     #[no_trace]
     current: Frame,
@@ -82,14 +82,14 @@ impl<'old, 'new> WithLifetime<'new> for FrameStore<'old> {
 /// Type representing a slice of arguments on the stack. Used to avoid
 /// allocations and copies when calling functions.
 #[derive(Copy, Clone)]
-pub(crate) struct ArgSlice(usize);
+pub struct ArgSlice(usize);
 
 impl ArgSlice {
-    pub(crate) fn new(size: usize) -> Self {
+    pub fn new(size: usize) -> Self {
         Self(size)
     }
 
-    pub(crate) fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.0
     }
 }
@@ -129,7 +129,7 @@ impl<'a> Index<RangeTo<usize>> for RootedLispStack<'a> {
 }
 
 impl<'a> RootedLispStack<'a> {
-    pub(crate) fn push_bytecode_frame(
+    pub fn push_bytecode_frame(
         &mut self,
         start: usize,
         depth: usize,
@@ -149,7 +149,7 @@ impl<'a> RootedLispStack<'a> {
         self.current = Frame { start, end, ..Frame::default() };
     }
 
-    pub(crate) fn push_frame(&mut self, arg_cnt: usize) {
+    pub fn push_frame(&mut self, arg_cnt: usize) {
         assert!(arg_cnt <= self.len());
         let start = self.len() - arg_cnt;
         assert!(self.current.start <= start);
@@ -160,13 +160,13 @@ impl<'a> RootedLispStack<'a> {
 
     /// Remove all the stack variables in the current frame and switch to the
     /// previous one
-    pub(crate) fn pop_frame(&mut self) {
+    pub fn pop_frame(&mut self) {
         self.vec.truncate(self.current.start);
         self.current = self.frames.last().unwrap().frame;
         self.frames.pop();
     }
 
-    pub(crate) fn get_bytecode_frame(&self, idx: usize) -> Option<(&Rto<&'a ByteFn>, usize)> {
+    pub fn get_bytecode_frame(&self, idx: usize) -> Option<(&Rto<&'a ByteFn>, usize)> {
         let frame = self.frames.get(idx)?;
         let bytecode = frame.bytecode.as_ref()?;
         let func = &bytecode.func;
@@ -174,15 +174,15 @@ impl<'a> RootedLispStack<'a> {
         Some((func, pc))
     }
 
-    pub(crate) fn prev_bytecode_frame(&self) -> Option<(&Rto<&'a ByteFn>, usize)> {
+    pub fn prev_bytecode_frame(&self) -> Option<(&Rto<&'a ByteFn>, usize)> {
         self.get_bytecode_frame(self.frames.len() - 1)
     }
 
-    pub(crate) fn current_frame(&self) -> usize {
+    pub fn current_frame(&self) -> usize {
         self.frames.len()
     }
 
-    pub(crate) fn unwind_frames(&mut self, frame: usize) {
+    pub fn unwind_frames(&mut self, frame: usize) {
         if frame == self.current_frame() {
             return; /* no frames to unwind */
         }
@@ -191,11 +191,11 @@ impl<'a> RootedLispStack<'a> {
         self.frames.truncate(frame);
     }
 
-    pub(crate) fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.vec.len()
     }
 
-    pub(crate) fn set_depth(&mut self, depth: usize) {
+    pub fn set_depth(&mut self, depth: usize) {
         let end = self.current.start + depth;
         self.current.end = end;
 
@@ -205,11 +205,11 @@ impl<'a> RootedLispStack<'a> {
         }
     }
 
-    pub(crate) fn set_arg_count(&mut self, arg_cnt: u16, rest: bool) {
+    pub fn set_arg_count(&mut self, arg_cnt: u16, rest: bool) {
         self.current.arg_cnt = (arg_cnt, rest);
     }
 
-    pub(crate) fn push<T: IntoRoot<Slot<Object<'a>>>>(&mut self, value: T) {
+    pub fn push<T: IntoRoot<Slot<Object<'a>>>>(&mut self, value: T) {
         if self.len() >= self.current.end {
             panic!(
                 "overflowed max depth - len was {}, but limit was {}",
@@ -221,40 +221,40 @@ impl<'a> RootedLispStack<'a> {
         self.vec.push(value);
     }
 
-    pub(crate) fn pop<'ob>(&mut self, cx: &'ob Context) -> Object<'ob> {
+    pub fn pop<'ob>(&mut self, cx: &'ob Context) -> Object<'ob> {
         assert!(self.len() > self.current.start);
         *self.vec.bind_mut(cx).pop().unwrap()
     }
 
-    pub(crate) fn top(&mut self) -> &mut Rto<Object<'a>> {
+    pub fn top(&mut self) -> &mut Rto<Object<'a>> {
         assert!(self.len() > self.current.start);
         self.vec.last_mut().unwrap()
     }
 
-    pub(crate) fn offset_end(&self, i: usize) -> usize {
+    pub fn offset_end(&self, i: usize) -> usize {
         assert!(i < self.len());
         let from_end = self.len() - (i + 1);
         assert!(self.current.start <= from_end);
         from_end
     }
 
-    pub(crate) fn push_ref(&mut self, i: impl Into<i32>, cx: &Context) {
+    pub fn push_ref(&mut self, i: impl Into<i32>, cx: &Context) {
         let obj = self[i.into() as usize].bind(cx);
         self.push(obj);
     }
 
-    pub(crate) fn set_ref(&mut self, i: impl Into<usize>) {
+    pub fn set_ref(&mut self, i: impl Into<usize>) {
         let index = self.offset_end(i.into());
         self.vec.swap_remove(index);
     }
 
-    pub(crate) fn fill_extra_args(&mut self, fill_args: u16) {
+    pub fn fill_extra_args(&mut self, fill_args: u16) {
         for _ in 0..fill_args {
             self.push(NIL);
         }
     }
 
-    pub(crate) fn remove_top(&mut self, i: usize) {
+    pub fn remove_top(&mut self, i: usize) {
         if i == 0 {
             return;
         }
@@ -262,34 +262,34 @@ impl<'a> RootedLispStack<'a> {
         self.truncate(offset);
     }
 
-    pub(crate) fn truncate(&mut self, len: usize) {
+    pub fn truncate(&mut self, len: usize) {
         self.vec.truncate(len);
     }
 
-    pub(crate) fn extend_from_slice(&mut self, src: &[Object]) {
+    pub fn extend_from_slice(&mut self, src: &[Object]) {
         self.vec.extend_from_slice(src);
     }
 
     // This indexing is backwards from the normal stack sematics, so we add
     // "as_vec" to the name to hopefully make it clearer
-    pub(crate) fn extend_as_vec_from_within(&mut self, src: impl RangeBounds<usize>) {
+    pub fn extend_as_vec_from_within(&mut self, src: impl RangeBounds<usize>) {
         self.vec.extend_from_within(src);
     }
 
-    pub(crate) fn frames<'b>(&'b self) -> &'b [Rto<Object<'a>>] {
+    pub fn frames<'b>(&'b self) -> &'b [Rto<Object<'a>>] {
         &self.vec[self.current.start..]
     }
 
-    pub(crate) fn arg_count(&self) -> usize {
+    pub fn arg_count(&self) -> usize {
         self.len() - self.current.start
     }
 
-    pub(crate) fn current_args(&self) -> &[Rto<Object<'a>>] {
+    pub fn current_args(&self) -> &[Rto<Object<'a>>] {
         // index as vec
         &self.vec[self.current.start..]
     }
 
-    pub(crate) fn arg_slice(&self, arg_slice: ArgSlice) -> &[Rto<Object<'a>>] {
+    pub fn arg_slice(&self, arg_slice: ArgSlice) -> &[Rto<Object<'a>>] {
         // index as stack
         &self[..arg_slice.0]
     }
@@ -299,48 +299,48 @@ impl<'a> RootedLispStack<'a> {
 ///
 /// This is a guard type that will pop the frame when it
 /// goes out of scope.
-pub(crate) struct CallFrame<'brw, 'rt> {
+pub struct CallFrame<'brw, 'rt> {
     env: &'brw mut Rt<super::Env<'rt>>,
 }
 
 impl<'brw, 'rt> CallFrame<'brw, 'rt> {
     /// Create a new function call frame with a drop guard to be removed when
     /// this goes out of scope.
-    pub(crate) fn new(env: &'brw mut Rt<super::Env<'rt>>) -> Self {
+    pub fn new(env: &'brw mut Rt<super::Env<'rt>>) -> Self {
         Self::new_with_args(env, 0)
     }
 
     /// Create a new function call frame with the top args on the stack. This
     /// frame will be removed when the `CallFrame` goes out of scope.
-    pub(crate) fn new_with_args(env: &'brw mut Rt<super::Env<'rt>>, args: usize) -> Self {
+    pub fn new_with_args(env: &'brw mut Rt<super::Env<'rt>>, args: usize) -> Self {
         env.stack.push_frame(args);
         Self { env }
     }
 
     /// Push an argument onto the stack as part of this call frame
-    pub(crate) fn push_arg(&mut self, arg: impl IntoRoot<Slot<Object<'rt>>>) {
+    pub fn push_arg(&mut self, arg: impl IntoRoot<Slot<Object<'rt>>>) {
         self.env.stack.push(arg);
     }
 
     /// Set the total argument count before a function call
-    pub(crate) fn finalize_arguments(&mut self) {
+    pub fn finalize_arguments(&mut self) {
         let args = self.env.stack.arg_count().try_into().unwrap();
         self.env.stack.set_arg_count(args, false);
     }
 
-    pub(crate) fn arg_count(&self) -> usize {
+    pub fn arg_count(&self) -> usize {
         let count1 = self.env.stack.arg_count();
         let count2 = self.env.stack.current.arg_cnt.0 as usize;
         assert_eq!(count1, count2);
         count1
     }
 
-    pub(crate) fn arg_slice(&self) -> &[Rto<Object<'rt>>] {
+    pub fn arg_slice(&self) -> &[Rto<Object<'rt>>] {
         &self.env.stack[..self.arg_count()]
     }
 
     /// Push a slice of arguments onto the stack as part of this call frame.
-    pub(crate) fn push_arg_slice(&mut self, src: &[Object]) {
+    pub fn push_arg_slice(&mut self, src: &[Object]) {
         self.env.stack.extend_from_slice(src);
     }
 }

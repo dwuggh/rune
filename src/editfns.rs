@@ -87,7 +87,7 @@ fn char_to_string(chr: u64) -> Result<String> {
 
 // TODO: this should not throw and error. Buffer will always be present.
 #[defun]
-pub(crate) fn insert(args: ArgSlice, env: &mut Rt<Env>, cx: &Context) -> Result<()> {
+pub fn insert(args: ArgSlice, env: &mut Rt<Env>, cx: &Context) -> Result<()> {
     let env = &mut **env; // Deref into rooted type so we can split the borrow
     let Some(buffer) = env.current_buffer.as_mut() else { bail!("No current buffer") };
     let args = Rt::bind_slice(env.stack.arg_slice(args), cx);
@@ -100,7 +100,7 @@ pub(crate) fn insert(args: ArgSlice, env: &mut Rt<Env>, cx: &Context) -> Result<
 
 // TODO: this should not throw and error. Buffer will always be present.
 #[defun]
-pub(crate) fn goto_char(position: usize, env: &mut Rt<Env>) -> Result<()> {
+pub fn goto_char(position: usize, env: &mut Rt<Env>) -> Result<()> {
     let Some(buffer) = env.current_buffer.as_mut() else { bail!("No current buffer") };
     buffer.text.set_cursor(position);
     Ok(())
@@ -108,7 +108,7 @@ pub(crate) fn goto_char(position: usize, env: &mut Rt<Env>) -> Result<()> {
 
 // TODO: this should not throw and error. Buffer will always be present.
 #[defun]
-pub(crate) fn point_max(env: &mut Rt<Env>) -> Result<usize> {
+pub fn point_max(env: &mut Rt<Env>) -> Result<usize> {
     let Some(buffer) = env.current_buffer.as_mut() else { bail!("No current buffer") };
     // TODO: Handle narrowing
     Ok(buffer.text.len_chars() + 1)
@@ -116,7 +116,7 @@ pub(crate) fn point_max(env: &mut Rt<Env>) -> Result<usize> {
 
 // TODO: this should not throw and error. Buffer will always be present.
 #[defun]
-pub(crate) fn point_marker(env: &mut Rt<Env>) -> Result<usize> {
+pub fn point_marker(env: &mut Rt<Env>) -> Result<usize> {
     let Some(buffer) = env.current_buffer.as_mut() else { bail!("No current buffer") };
     // TODO: Implement marker objects
     Ok(buffer.text.cursor().chars())

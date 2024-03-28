@@ -14,11 +14,11 @@ use std::cell::RefCell;
 use std::fmt::{self, Debug, Display, Write};
 use std::sync::Mutex;
 
-pub(crate) type HashTable<'ob> = IndexMap<Object<'ob>, Object<'ob>>;
+pub type HashTable<'ob> = IndexMap<Object<'ob>, Object<'ob>>;
 
 macro_attr! {
     #[derive(PartialEq, Eq, NewtypeDebug!, NewtypeDisplay!, NewtypeDeref!, NewtypeMarkable!, Trace)]
-    pub(crate) struct LispHashTable(GcHeap<HashTableCore<'static>>);
+    pub struct LispHashTable(GcHeap<HashTableCore<'static>>);
 }
 
 impl LispHashTable {
@@ -27,7 +27,7 @@ impl LispHashTable {
     }
 }
 
-pub(crate) struct HashTableCore<'ob>(HashTableType<'ob>);
+pub struct HashTableCore<'ob>(HashTableType<'ob>);
 
 // Hashtables are currently the only data structure that can be shared between
 // threads. This is because it is used for caching in some functions in
@@ -65,23 +65,23 @@ impl<'a> HashTableCore<'a> {
         }
     }
 
-    pub(crate) fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         self.with(|x| x.len())
     }
 
-    pub(crate) fn get(&self, key: Object) -> Option<Object<'_>> {
+    pub fn get(&self, key: Object) -> Option<Object<'_>> {
         self.with(|x| x.get(&key).copied())
     }
 
-    pub(crate) fn get_index(&self, index: usize) -> Option<(Object, Object)> {
+    pub fn get_index(&self, index: usize) -> Option<(Object, Object)> {
         self.with(|x| x.get_index(index).map(|(k, v)| (*k, *v)))
     }
 
-    pub(crate) fn get_index_of(&self, key: Object) -> Option<usize> {
+    pub fn get_index_of(&self, key: Object) -> Option<usize> {
         self.with(|x| x.get_index_of(&key))
     }
 
-    pub(crate) fn insert(&self, key: Object, value: Object) {
+    pub fn insert(&self, key: Object, value: Object) {
         match &self.0 {
             HashTableType::Local(table) => {
                 let key = unsafe { key.with_lifetime() };
@@ -100,19 +100,19 @@ impl<'a> HashTableCore<'a> {
         };
     }
 
-    pub(crate) fn shift_remove(&self, key: Object) {
+    pub fn shift_remove(&self, key: Object) {
         let key = unsafe { key.with_lifetime() };
         self.with(|x| x.shift_remove(&key));
     }
 
-    pub(crate) fn get_iter_index(&self) -> usize {
+    pub fn get_iter_index(&self) -> usize {
         match &self.0 {
             HashTableType::Local(table) => table.borrow().iter_idx,
             HashTableType::Global(table) => table.lock().unwrap().iter_idx,
         }
     }
 
-    pub(crate) fn set_iter_index(&self, index: usize) {
+    pub fn set_iter_index(&self, index: usize) {
         match &self.0 {
             HashTableType::Local(table) => table.borrow_mut().iter_idx = index,
             HashTableType::Global(table) => table.lock().unwrap().iter_idx = index,

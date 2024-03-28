@@ -39,7 +39,7 @@ fn check_upper_bounds(idx: Option<i64>, len: usize) -> Result<usize> {
 }
 
 #[defun]
-pub(crate) fn read_from_string<'ob>(
+pub fn read_from_string<'ob>(
     string: &str,
     start: Option<i64>,
     end: Option<i64>,
@@ -59,7 +59,7 @@ pub(crate) fn read_from_string<'ob>(
     Ok(Cons::new(obj, new_pos as i64, cx).into())
 }
 
-pub(crate) fn load_internal(contents: &str, cx: &mut Context, env: &mut Rt<Env>) -> Result<bool> {
+pub fn load_internal(contents: &str, cx: &mut Context, env: &mut Rt<Env>) -> Result<bool> {
     let mut pos = 0;
     let macroexpand: Option<Function> = None;
     root!(macroexpand, cx);
@@ -154,7 +154,7 @@ fn find_file_in_load_path(file: &str, cx: &Context, env: &Rt<Env>) -> Result<Pat
 }
 
 #[defun]
-pub(crate) fn load(
+pub fn load(
     file: &Rto<Gc<&LispString>>,
     noerror: Option<()>,
     nomessage: Option<()>,
@@ -207,12 +207,12 @@ pub(crate) fn load(
 }
 
 #[defun]
-pub(crate) fn intern<'ob>(string: &str, cx: &'ob Context) -> Symbol<'ob> {
+pub fn intern<'ob>(string: &str, cx: &'ob Context) -> Symbol<'ob> {
     crate::core::env::intern(string, cx)
 }
 
 #[defun]
-pub(crate) fn intern_soft(string: Object, obarray: Option<()>) -> Result<Symbol> {
+pub fn intern_soft(string: Object, obarray: Option<()>) -> Result<Symbol> {
     ensure!(obarray.is_none(), "intern-soft obarray not implemented");
     match string.untag() {
         ObjectType::Symbol(sym) => {

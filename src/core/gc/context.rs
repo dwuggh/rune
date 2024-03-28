@@ -11,7 +11,7 @@ use std::sync::atomic::AtomicBool;
 /// A global store of all gc roots. This struct should be passed to the [Context]
 /// when it is created.
 #[derive(Default, Debug)]
-pub(crate) struct RootSet {
+pub struct RootSet {
     pub(super) roots: RefCell<Vec<*const dyn Trace>>,
 }
 
@@ -25,7 +25,7 @@ pub(in crate::core) enum DropStackElem {
 /// A block of allocations. This type should be owned by [Context] and not used
 /// directly.
 #[derive(Default)]
-pub(crate) struct Block<const CONST: bool> {
+pub struct Block<const CONST: bool> {
     pub(in crate::core) objects: bumpalo::Bump,
     pub(in crate::core) drop_stack: RefCell<Vec<DropStackElem>>,
     pub(in crate::core) uninterned_symbol_map: UninternedSymbolMap,
@@ -34,8 +34,8 @@ pub(crate) struct Block<const CONST: bool> {
 /// Owns all allocations and creates objects. All objects have
 /// a lifetime tied to the borrow of their `Context`. When the
 /// `Context` goes out of scope, no objects should be accessible.
-pub(crate) struct Context<'rt> {
-    pub(crate) block: Block<false>,
+pub struct Context<'rt> {
+    pub block: Block<false>,
     root_set: &'rt RootSet,
     next_limit: usize,
 }
@@ -63,7 +63,7 @@ thread_local! {
 static GLOBAL_CHECK: AtomicBool = AtomicBool::new(false);
 
 impl Block<true> {
-    pub(crate) fn new_global() -> Self {
+    pub fn new_global() -> Self {
         use std::sync::atomic::Ordering::SeqCst as Ord;
         assert!(GLOBAL_CHECK.compare_exchange(false, true, Ord, Ord).is_ok());
         Self::default()
@@ -71,16 +71,16 @@ impl Block<true> {
 }
 
 impl Block<false> {
-    pub(crate) fn new_local() -> Self {
+    pub fn new_local() -> Self {
         Self::assert_unique();
         Self::default()
     }
 
-    pub(crate) fn new_local_unchecked() -> Self {
+    pub fn new_local_unchecked() -> Self {
         Self::default()
     }
 
-    pub(crate) fn assert_unique() {
+    pub fn assert_unique() {
         SINGLETON_CHECK.with(|x| {
             assert!(!x.get(), "There was already and active context when this context was created");
             x.set(true);
@@ -89,7 +89,7 @@ impl Block<false> {
 }
 
 impl<const CONST: bool> Block<CONST> {
-    pub(crate) fn add<'ob, T, Tx>(&'ob self, obj: T) -> Object
+    pub fn add<'ob, T, Tx>(&'ob self, obj: T) -> Object
     where
         T: IntoObject<Out<'ob> = Tx>,
         Gc<Tx>: Into<Object<'ob>>,
@@ -97,7 +97,7 @@ impl<const CONST: bool> Block<CONST> {
         obj.into_obj(self).into()
     }
 
-    pub(crate) fn add_as<'ob, T, Tx, V>(&'ob self, obj: T) -> Gc<V>
+    pub fn add_as<'ob, T, Tx, V>(&'ob self, obj: T) -> Gc<V>
     where
         T: IntoObject<Out<'ob> = Tx>,
         Gc<Tx>: Into<Gc<V>>,
@@ -127,27 +127,27 @@ impl<const CONST: bool> Block<CONST> {
 impl<'ob, 'rt> Context<'rt> {
     const MIN_GC_BYTES: usize = 2000;
     const GC_GROWTH_FACTOR: usize = 12; // divide by 10
-    pub(crate) fn new(roots: &'rt RootSet) -> Self {
+    pub fn new(roots: &'rt RootSet) -> Self {
         Self { block: Block::new_local(), root_set: roots, next_limit: Self::MIN_GC_BYTES }
     }
 
-    pub(crate) fn from_block(block: Block<false>, roots: &'rt RootSet) -> Self {
+    pub fn from_block(block: Block<false>, roots: &'rt RootSet) -> Self {
         Block::assert_unique();
         Context { block, root_set: roots, next_limit: Self::MIN_GC_BYTES }
     }
 
-    pub(crate) fn bind<T>(&'ob self, obj: T) -> <T as WithLifetime>::Out
+    pub fn bind<T>(&'ob self, obj: T) -> <T as WithLifetime>::Out
     where
         T: WithLifetime<'ob>,
     {
         unsafe { obj.with_lifetime() }
     }
 
-    pub(crate) fn get_root_set(&'ob self) -> &'rt RootSet {
+    pub fn get_root_set(&'ob self) -> &'rt RootSet {
         self.root_set
     }
 
-    pub(crate) fn garbage_collect(&mut self, force: bool) {
+    pub fn garbage_collect(&mut self, force: bool) {
         let bytes = self.block.objects.allocated_bytes();
         if cfg!(not(test)) && !force && bytes < self.next_limit {
             return;

@@ -13,7 +13,7 @@ use std::path::{Component, Path, MAIN_SEPARATOR};
 defvar!(FILE_NAME_HANDLER_ALIST);
 
 #[defun]
-pub(crate) fn expand_file_name(
+pub fn expand_file_name(
     name: &str,
     default_directory: Option<&str>,
     env: &Rt<Env>,

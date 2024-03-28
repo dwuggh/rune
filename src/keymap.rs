@@ -16,6 +16,6 @@ fn use_global_map(_keymap: Object) {}
 fn set_keymap_parent<'ob>(_keymap: Object<'ob>, _parent: Object<'ob>) {}
 
 #[defun]
-pub(crate) fn define_key<'ob>(_keymap: Object<'ob>, _key: Object<'ob>, _def: Object<'ob>) {}
+pub fn define_key<'ob>(_keymap: Object<'ob>, _key: Object<'ob>, _def: Object<'ob>) {}
 
 defvar!(MINIBUFFER_LOCAL_MAP);

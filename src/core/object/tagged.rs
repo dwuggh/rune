@@ -24,7 +24,7 @@ use std::marker::PhantomData;
 use std::{fmt, ptr::NonNull};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub(crate) struct RawObj {
+pub struct RawObj {
     ptr: *const u8,
 }
 
@@ -40,13 +40,13 @@ impl Default for RawObj {
 ///
 /// The build.rs file guarantees that that `nil` is the first symbol in
 /// `BUILTIN_SYMBOLS`, so we know it will always be 0.
-pub(crate) const NIL: Object<'static> = unsafe { std::mem::transmute(0u64) };
+pub const NIL: Object<'static> = unsafe { std::mem::transmute(0u64) };
 
 /// A `t` object.
 ///
 /// The build.rs file guarantees that that `t` is the second symbol in
 /// `BUILTIN_SYMBOLS`, so we can rely on its value being constant.
-pub(crate) const TRUE: Object<'static> =
+pub const TRUE: Object<'static> =
     // offset from 0 by size of SymbolCell and then shift 8 to account for
     // tagging
     unsafe { std::mem::transmute(std::mem::size_of::<SymbolCell>() << 8) };
@@ -56,7 +56,7 @@ pub(crate) const TRUE: Object<'static> =
 /// have a lifetime tied to the context which manages garbage collections. A Gc
 /// can be reinterpreted as any type that shares the same tag.
 #[derive(Copy, Clone)]
-pub(crate) struct Gc<T> {
+pub struct Gc<T> {
     ptr: *const u8,
     _data: PhantomData<T>,
 }
@@ -86,7 +86,7 @@ impl<T> Gc<T> {
         unsafe { std::mem::transmute(self.ptr.addr() as u8) }
     }
 
-    pub(crate) fn into_raw(self) -> RawObj {
+    pub fn into_raw(self) -> RawObj {
         RawObj { ptr: self.ptr }
     }
 
@@ -94,23 +94,23 @@ impl<T> Gc<T> {
         self.ptr
     }
 
-    pub(crate) unsafe fn from_raw(raw: RawObj) -> Self {
+    pub unsafe fn from_raw(raw: RawObj) -> Self {
         Self::new(raw.ptr)
     }
 
-    pub(crate) unsafe fn from_raw_ptr(raw: *mut u8) -> Self {
+    pub unsafe fn from_raw_ptr(raw: *mut u8) -> Self {
         Self::new(raw)
     }
 
-    pub(crate) fn ptr_eq<U>(self, other: Gc<U>) -> bool {
+    pub fn ptr_eq<U>(self, other: Gc<U>) -> bool {
         self.ptr == other.ptr
     }
 
-    pub(crate) fn copy_as_obj<const C: bool>(self, _: &Block<C>) -> Object {
+    pub fn copy_as_obj<const C: bool>(self, _: &Block<C>) -> Object {
         Gc::new(self.ptr)
     }
 
-    pub(crate) fn as_obj(&self) -> Object<'_> {
+    pub fn as_obj(&self) -> Object<'_> {
         Gc::new(self.ptr)
     }
 }
@@ -118,7 +118,7 @@ impl<T> Gc<T> {
 /// The [TaggedPtr] trait is local to this module (by design). This trait
 /// exports the one pubic method we want (untag) so it can be used in other
 /// modules.
-pub(crate) trait Untag<T> {
+pub trait Untag<T> {
     fn untag_erased(self) -> T;
 }
 
@@ -135,7 +135,7 @@ where
     /// A non-trait version of [Untag::untag_erased]. This is useful when we
     /// don't want to import the trait all over the place. The only time we need
     /// to import the trait is in generic code.
-    pub(crate) fn untag(self) -> T {
+    pub fn untag(self) -> T {
         Self::untag_erased(self)
     }
 }
@@ -143,7 +143,7 @@ where
 /// A wrapper trait to expose the `tag` method for GC managed references and
 /// immediate values. This is convenient when we don't have access to the
 /// `Context` but want to retag a value. Doesn't currently have a lot of use.
-pub(crate) trait TagType
+pub trait TagType
 where
     Self: Sized,
 {
@@ -186,7 +186,7 @@ impl<'a, T: 'a + Copy> From<&Gc<T>> for ObjectType<'a> {
 /// generic types don't expose their lifetimes. This trait is used to work
 /// around that. Must be used with extreme care, as it is easy to cast it to an
 /// invalid lifetime.
-pub(crate) trait WithLifetime<'new> {
+pub trait WithLifetime<'new> {
     type Out: 'new;
     unsafe fn with_lifetime(self) -> Self::Out;
 }
@@ -288,7 +288,7 @@ object_trait_impls!(LispBuffer);
 /// Trait for types that can be managed by the GC. This trait is implemented for
 /// as many types as possible, even for types that are already Gc managed, Like
 /// `Gc<T>`. This makes it easier to write generic code for working with Gc types.
-pub(crate) trait IntoObject {
+pub trait IntoObject {
     type Out<'ob>;
 
     fn into_obj<const C: bool>(self, block: &Block<C>) -> Gc<Self::Out<'_>>;
@@ -495,7 +495,7 @@ mod private {
     use super::{Gc, WithLifetime};
 
     #[repr(u8)]
-    pub(crate) enum Tag {
+    pub enum Tag {
         // Symbol must be 0 to enable nil to be all zeroes
         Symbol = 0,
         Int,
@@ -739,7 +739,7 @@ impl TaggedPtr for i64 {
     }
 }
 
-pub(crate) fn int_to_char(int: i64) -> Result<char, TypeError> {
+pub fn int_to_char(int: i64) -> Result<char, TypeError> {
     let err = TypeError::new(Type::Char, TagType::tag(int));
     match u32::try_from(int) {
         Ok(x) => match char::from_u32(x) {
@@ -913,14 +913,14 @@ macro_rules! cast_gc {
 #[derive(Copy, Clone)]
 #[repr(u8)]
 /// The enum form of [Number] to take advantage of ergonomics of enums in Rust.
-pub(crate) enum NumberType<'ob> {
+pub enum NumberType<'ob> {
     Int(i64) = Tag::Int as u8,
     Float(&'ob LispFloat) = Tag::Float as u8,
 }
 cast_gc!(NumberType<'ob> => i64, &LispFloat);
 
 /// Represents a tagged pointer to a number value
-pub(crate) type Number<'ob> = Gc<NumberType<'ob>>;
+pub type Number<'ob> = Gc<NumberType<'ob>>;
 
 impl<'old, 'new> WithLifetime<'new> for NumberType<'old> {
     type Out = NumberType<'new>;
@@ -934,7 +934,7 @@ impl<'old, 'new> WithLifetime<'new> for NumberType<'old> {
 #[derive(Copy, Clone)]
 #[repr(u8)]
 /// The enum form of [List] to take advantage of ergonomics of enums in Rust.
-pub(crate) enum ListType<'ob> {
+pub enum ListType<'ob> {
     // Since Tag::Symbol is 0 and sym::NIL is 0, we can use 0 as the nil value
     Nil = Tag::Symbol as u8,
     Cons(&'ob Cons) = Tag::Cons as u8,
@@ -942,10 +942,10 @@ pub(crate) enum ListType<'ob> {
 cast_gc!(ListType<'ob> => &'ob Cons);
 
 /// Represents a tagged pointer to a list value (cons or nil)
-pub(crate) type List<'ob> = Gc<ListType<'ob>>;
+pub type List<'ob> = Gc<ListType<'ob>>;
 
 impl ListType<'_> {
-    pub(crate) fn empty() -> Gc<Self> {
+    pub fn empty() -> Gc<Self> {
         unsafe { cast_gc(NIL) }
     }
 }
@@ -962,7 +962,7 @@ impl<'old, 'new> WithLifetime<'new> for ListType<'old> {
 #[derive(Copy, Clone, Debug)]
 #[repr(u8)]
 /// The enum form of [Function] to take advantage of ergonomics of enums in Rust.
-pub(crate) enum FunctionType<'ob> {
+pub enum FunctionType<'ob> {
     ByteFn(&'ob ByteFn) = Tag::ByteFn as u8,
     SubrFn(&'static SubrFn) = Tag::SubrFn as u8,
     Cons(&'ob Cons) = Tag::Cons as u8,
@@ -973,7 +973,7 @@ cast_gc!(FunctionType<'ob> => &'ob ByteFn, &'ob SubrFn, &'ob Cons, Symbol<'ob>);
 /// Represents a tagged pointer to a lisp object that could be interpreted as a
 /// function. Note that not all `Function` types are valid functions (it could
 /// be a cons cell for example).
-pub(crate) type Function<'ob> = Gc<FunctionType<'ob>>;
+pub type Function<'ob> = Gc<FunctionType<'ob>>;
 
 impl<'old, 'new> WithLifetime<'new> for FunctionType<'old> {
     type Out = FunctionType<'new>;
@@ -990,7 +990,7 @@ extern "Rust" {
 
 #[cfg(miri)]
 impl<'ob> FunctionType<'ob> {
-    pub(crate) fn set_as_miri_root(self) {
+    pub fn set_as_miri_root(self) {
         // TODO: semispace fix
         // match self {
         //     FunctionType::ByteFn(x) => {
@@ -1019,7 +1019,7 @@ impl<'ob> FunctionType<'ob> {
 #[derive(Copy, Clone, PartialEq, Eq)]
 #[repr(u8)]
 /// The enum form of [Object] to take advantage of ergonomics of enums in Rust.
-pub(crate) enum ObjectType<'ob> {
+pub enum ObjectType<'ob> {
     Int(i64) = Tag::Int as u8,
     Float(&'ob LispFloat) = Tag::Float as u8,
     Symbol(Symbol<'ob>) = Tag::Symbol as u8,
@@ -1036,7 +1036,7 @@ pub(crate) enum ObjectType<'ob> {
 
 /// The Object defintion that contains all other possible lisp objects. This
 /// type must remain covariant over 'ob.
-pub(crate) type Object<'ob> = Gc<ObjectType<'ob>>;
+pub type Object<'ob> = Gc<ObjectType<'ob>>;
 
 cast_gc!(ObjectType<'ob> => NumberType<'ob>,
          ListType<'ob>,
@@ -1056,10 +1056,10 @@ cast_gc!(ObjectType<'ob> => NumberType<'ob>,
 );
 
 impl ObjectType<'_> {
-    pub(crate) const NIL: ObjectType<'static> = ObjectType::Symbol(sym::NIL);
-    pub(crate) const TRUE: ObjectType<'static> = ObjectType::Symbol(sym::TRUE);
+    pub const NIL: ObjectType<'static> = ObjectType::Symbol(sym::NIL);
+    pub const TRUE: ObjectType<'static> = ObjectType::Symbol(sym::TRUE);
     /// Return the type of an object
-    pub(crate) fn get_type(self) -> Type {
+    pub fn get_type(self) -> Type {
         match self {
             ObjectType::Int(_) => Type::Int,
             ObjectType::Float(_) => Type::Float,
@@ -1237,7 +1237,7 @@ impl<'ob> TryFrom<Object<'ob>> for Gc<i64> {
 // This function is needed due to the lack of specialization and there being a
 // blanket impl for From<T> for Option<T>
 impl<'ob> Object<'ob> {
-    pub(crate) fn try_from_option<T, E>(value: Object<'ob>) -> Result<Option<T>, E>
+    pub fn try_from_option<T, E>(value: Object<'ob>) -> Result<Option<T>, E>
     where
         Object<'ob>: TryInto<T, Error = E>,
     {
@@ -1248,7 +1248,7 @@ impl<'ob> Object<'ob> {
         }
     }
 
-    pub(crate) fn is_nil(self) -> bool {
+    pub fn is_nil(self) -> bool {
         self == sym::NIL
     }
 }
@@ -1327,7 +1327,7 @@ impl<'ob> std::ops::Deref for Gc<&'ob Cons> {
     }
 }
 
-pub(crate) trait CloneIn<'new, T>
+pub trait CloneIn<'new, T>
 where
     T: 'new,
 {
@@ -1536,7 +1536,7 @@ impl<'ob> PartialEq<bool> for Object<'ob> {
 }
 
 impl<'ob> Object<'ob> {
-    pub(crate) fn as_cons(self) -> &'ob Cons {
+    pub fn as_cons(self) -> &'ob Cons {
         self.try_into().unwrap()
     }
 }
@@ -1593,7 +1593,7 @@ impl fmt::Debug for ObjectType<'_> {
 }
 
 impl ObjectType<'_> {
-    pub(crate) fn display_walk(
+    pub fn display_walk(
         &self,
         f: &mut fmt::Formatter,
         seen: &mut HashSet<*const u8>,
@@ -1617,7 +1617,7 @@ impl ObjectType<'_> {
 }
 
 impl<'ob> Object<'ob> {
-    pub(crate) fn is_marked(self) -> bool {
+    pub fn is_marked(self) -> bool {
         match self.untag() {
             ObjectType::Int(_) | ObjectType::SubrFn(_) => true,
             ObjectType::Float(x) => x.is_marked(),
@@ -1632,11 +1632,27 @@ impl<'ob> Object<'ob> {
             ObjectType::Buffer(x) => x.is_marked(),
         }
     }
+
+    pub fn trace_mark(self, state: &mut GcState) {
+        match self.untag() {
+            ObjectType::Int(_) | ObjectType::SubrFn(_) => {}
+            ObjectType::Float(x) => x.trace(state),
+            ObjectType::String(x) => x.trace(state),
+            ObjectType::ByteString(x) => x.trace(state),
+            ObjectType::Vec(vec) => vec.trace(state),
+            ObjectType::Record(x) => x.trace(state),
+            ObjectType::HashTable(x) => x.trace(state),
+            ObjectType::Cons(x) => x.trace(state),
+            ObjectType::Symbol(x) => x.trace(state),
+            ObjectType::ByteFn(x) => x.trace(state),
+            ObjectType::Buffer(x) => x.trace(state),
+        }
+    }
 }
 
 impl<'ob> ListType<'ob> {
     #[cfg(test)]
-    pub(crate) fn car(self) -> Object<'ob> {
+    pub fn car(self) -> Object<'ob> {
         match self {
             ListType::Nil => NIL,
             ListType::Cons(x) => x.car(),

@@ -24,7 +24,7 @@ fn identity(arg: Object) -> Object {
     arg
 }
 
-pub(crate) fn slice_into_list<'ob>(
+pub fn slice_into_list<'ob>(
     slice: &[Object<'ob>],
     tail: Option<Object<'ob>>,
     cx: &'ob Context,
@@ -33,7 +33,7 @@ pub(crate) fn slice_into_list<'ob>(
     from_end.fold(tail.into(), |acc, obj| Cons::new(*obj, acc, cx).into())
 }
 
-pub(crate) fn build_list<'ob, E>(
+pub fn build_list<'ob, E>(
     mut iter: impl Iterator<Item = Result<Object<'ob>, E>>,
     cx: &'ob Context,
 ) -> Result<Object<'ob>, E> {
@@ -49,17 +49,17 @@ pub(crate) fn build_list<'ob, E>(
 }
 
 #[defun]
-pub(crate) fn eq(obj1: Object, obj2: Object) -> bool {
+pub fn eq(obj1: Object, obj2: Object) -> bool {
     obj1.ptr_eq(obj2)
 }
 
 #[defun]
-pub(crate) fn equal<'ob>(obj1: Object<'ob>, obj2: Object<'ob>) -> bool {
+pub fn equal<'ob>(obj1: Object<'ob>, obj2: Object<'ob>) -> bool {
     obj1 == obj2
 }
 
 #[defun]
-pub(crate) fn eql<'ob>(obj1: Object<'ob>, obj2: Object<'ob>) -> bool {
+pub fn eql<'ob>(obj1: Object<'ob>, obj2: Object<'ob>) -> bool {
     match (obj1.untag(), obj2.untag()) {
         (ObjectType::Float(f1), ObjectType::Float(f2)) => f1.to_bits() == f2.to_bits(),
         _ => obj1.ptr_eq(obj2),
@@ -107,7 +107,7 @@ fn plist_member<'ob>(
 }
 
 #[defun]
-pub(crate) fn prin1_to_string(object: Object, _noescape: Option<Object>) -> String {
+pub fn prin1_to_string(object: Object, _noescape: Option<Object>) -> String {
     format!("{object}")
 }
 
@@ -124,7 +124,7 @@ fn string_search(needle: &str, haystack: &str, start_pos: Option<usize>) -> Opti
 }
 
 #[defun]
-pub(crate) fn mapcar<'ob>(
+pub fn mapcar<'ob>(
     function: &Rto<Function>,
     sequence: &Rto<Object>,
     env: &mut Rt<Env>,
@@ -160,7 +160,7 @@ pub(crate) fn mapcar<'ob>(
 }
 
 #[defun]
-pub(crate) fn mapc<'ob>(
+pub fn mapc<'ob>(
     function: &Rto<Function>,
     sequence: &Rto<List>,
     env: &mut Rt<Env>,
@@ -179,7 +179,7 @@ pub(crate) fn mapc<'ob>(
 }
 
 #[defun]
-pub(crate) fn mapcan<'ob>(
+pub fn mapcan<'ob>(
     function: &Rto<Function>,
     sequence: &Rto<Object>,
     env: &mut Rt<Env>,
@@ -194,7 +194,7 @@ pub(crate) fn mapcan<'ob>(
 }
 
 #[defun]
-pub(crate) fn mapconcat(
+pub fn mapconcat(
     function: &Rto<Function>,
     sequence: &Rto<Object>,
     seperator: Option<&Rto<Gc<&LispString>>>,
@@ -221,7 +221,7 @@ pub(crate) fn mapconcat(
 }
 
 #[defun]
-pub(crate) fn nreverse(seq: List) -> Result<Object> {
+pub fn nreverse(seq: List) -> Result<Object> {
     let mut prev = NIL;
     for tail in seq.conses() {
         let tail = tail?;
@@ -232,7 +232,7 @@ pub(crate) fn nreverse(seq: List) -> Result<Object> {
 }
 
 #[defun]
-pub(crate) fn reverse<'ob>(seq: List, cx: &'ob Context) -> Result<Object<'ob>> {
+pub fn reverse<'ob>(seq: List, cx: &'ob Context) -> Result<Object<'ob>> {
     let mut tail = NIL;
     for elem in seq {
         tail = Cons::new(elem?, tail, cx).into();
@@ -241,7 +241,7 @@ pub(crate) fn reverse<'ob>(seq: List, cx: &'ob Context) -> Result<Object<'ob>> {
 }
 
 #[defun]
-pub(crate) fn nconc<'ob>(lists: &[List<'ob>]) -> Result<Object<'ob>> {
+pub fn nconc<'ob>(lists: &[List<'ob>]) -> Result<Object<'ob>> {
     let mut tail: Option<&Cons> = None;
     for list in lists {
         if let Some(cons) = tail {
@@ -274,7 +274,7 @@ fn take<'ob>(n: i64, list: List<'ob>, cx: &'ob Context) -> Result<Object<'ob>> {
 }
 
 #[defun]
-pub(crate) fn append<'ob>(
+pub fn append<'ob>(
     append: Object<'ob>,
     sequences: &[Object<'ob>],
     cx: &'ob Context,
@@ -301,7 +301,7 @@ pub(crate) fn append<'ob>(
 }
 
 #[defun]
-pub(crate) fn assq<'ob>(key: Object<'ob>, alist: List<'ob>) -> Result<Object<'ob>> {
+pub fn assq<'ob>(key: Object<'ob>, alist: List<'ob>) -> Result<Object<'ob>> {
     for elem in alist {
         if let ObjectType::Cons(cons) = elem?.untag() {
             if eq(key, cons.car()) {
@@ -325,7 +325,7 @@ fn rassq<'ob>(key: Object<'ob>, alist: List<'ob>) -> Result<Object<'ob>> {
 }
 
 #[defun]
-pub(crate) fn assoc<'ob>(
+pub fn assoc<'ob>(
     key: &Rto<Object<'ob>>,
     alist: &Rto<List<'ob>>,
     testfn: Option<&Rto<Object>>,
@@ -411,12 +411,12 @@ fn delete_from_list<'ob>(elt: Object<'ob>, list: List<'ob>, eq_fn: EqFunc) -> Re
 }
 
 #[defun]
-pub(crate) fn delete<'ob>(elt: Object<'ob>, list: List<'ob>) -> Result<Object<'ob>> {
+pub fn delete<'ob>(elt: Object<'ob>, list: List<'ob>) -> Result<Object<'ob>> {
     delete_from_list(elt, list, equal)
 }
 
 #[defun]
-pub(crate) fn delq<'ob>(elt: Object<'ob>, list: List<'ob>) -> Result<Object<'ob>> {
+pub fn delq<'ob>(elt: Object<'ob>, list: List<'ob>) -> Result<Object<'ob>> {
     delete_from_list(elt, list, eq)
 }
 
@@ -429,17 +429,17 @@ fn member_of_list<'ob>(elt: Object<'ob>, list: List<'ob>, eq_fn: EqFunc) -> Resu
 }
 
 #[defun]
-pub(crate) fn memq<'ob>(elt: Object<'ob>, list: List<'ob>) -> Result<Object<'ob>> {
+pub fn memq<'ob>(elt: Object<'ob>, list: List<'ob>) -> Result<Object<'ob>> {
     member_of_list(elt, list, eq)
 }
 
 #[defun]
-pub(crate) fn memql<'ob>(elt: Object<'ob>, list: List<'ob>) -> Result<Object<'ob>> {
+pub fn memql<'ob>(elt: Object<'ob>, list: List<'ob>) -> Result<Object<'ob>> {
     member_of_list(elt, list, eql)
 }
 
 #[defun]
-pub(crate) fn member<'ob>(elt: Object<'ob>, list: List<'ob>) -> Result<Object<'ob>> {
+pub fn member<'ob>(elt: Object<'ob>, list: List<'ob>) -> Result<Object<'ob>> {
     member_of_list(elt, list, equal)
 }
 
@@ -489,7 +489,7 @@ fn sort<'ob>(
 }
 
 #[defun]
-pub(crate) fn defvaralias<'ob>(
+pub fn defvaralias<'ob>(
     new_alias: Symbol<'ob>,
     _base_variable: Symbol,
     _docstring: Option<&str>,
@@ -500,10 +500,10 @@ pub(crate) fn defvaralias<'ob>(
 
 #[defun]
 // TODO: implement
-pub(crate) fn featurep(_feature: Symbol, _subfeature: Option<Symbol>) {}
+pub fn featurep(_feature: Symbol, _subfeature: Option<Symbol>) {}
 
 #[defun]
-pub(crate) fn require<'ob>(
+pub fn require<'ob>(
     feature: &Rto<Gc<Symbol>>,
     filename: Option<&Rto<Gc<&LispString>>>,
     noerror: Option<()>,
@@ -528,7 +528,7 @@ pub(crate) fn require<'ob>(
 }
 
 #[defun]
-pub(crate) fn concat(sequences: &[Object]) -> Result<String> {
+pub fn concat(sequences: &[Object]) -> Result<String> {
     let mut concat = String::new();
     for elt in sequences {
         match elt.untag() {
@@ -541,7 +541,7 @@ pub(crate) fn concat(sequences: &[Object]) -> Result<String> {
 }
 
 #[defun]
-pub(crate) fn vconcat<'ob>(sequences: &[Object], cx: &'ob Context) -> Result<Gc<&'ob LispVec>> {
+pub fn vconcat<'ob>(sequences: &[Object], cx: &'ob Context) -> Result<Gc<&'ob LispVec>> {
     let mut concated: Vec<Object> = Vec::new();
     for elt in sequences {
         match elt.untag() {
@@ -569,7 +569,7 @@ pub(crate) fn vconcat<'ob>(sequences: &[Object], cx: &'ob Context) -> Result<Gc<
 }
 
 #[defun]
-pub(crate) fn length(sequence: Object) -> Result<usize> {
+pub fn length(sequence: Object) -> Result<usize> {
     let size = match sequence.untag() {
         ObjectType::Cons(x) => x.elements().len()?,
         ObjectType::Vec(x) => x.len(),
@@ -583,12 +583,12 @@ pub(crate) fn length(sequence: Object) -> Result<usize> {
 }
 
 #[defun]
-pub(crate) fn safe_length(sequence: Object) -> usize {
+pub fn safe_length(sequence: Object) -> usize {
     length(sequence).unwrap_or(0)
 }
 
 #[defun]
-pub(crate) fn proper_list_p(object: Object) -> Option<usize> {
+pub fn proper_list_p(object: Object) -> Option<usize> {
     // TODO: Handle dotted list and circular
     match object.untag() {
         ObjectType::Cons(x) => x.elements().len().ok(),
@@ -597,12 +597,12 @@ pub(crate) fn proper_list_p(object: Object) -> Option<usize> {
 }
 
 #[defun]
-pub(crate) fn nth(n: usize, list: List) -> Result<Object> {
+pub fn nth(n: usize, list: List) -> Result<Object> {
     Ok(list.elements().fallible().nth(n)?.unwrap_or_default())
 }
 
 #[defun]
-pub(crate) fn nthcdr(n: usize, list: List) -> Result<List> {
+pub fn nthcdr(n: usize, list: List) -> Result<List> {
     match list.conses().fallible().nth(n)? {
         Some(x) => Ok(x.into()),
         None => Ok(ListType::empty()),
@@ -610,7 +610,7 @@ pub(crate) fn nthcdr(n: usize, list: List) -> Result<List> {
 }
 
 #[defun]
-pub(crate) fn elt<'ob>(sequence: Object<'ob>, n: usize, cx: &'ob Context) -> Result<Object<'ob>> {
+pub fn elt<'ob>(sequence: Object<'ob>, n: usize, cx: &'ob Context) -> Result<Object<'ob>> {
     match sequence.untag() {
         ObjectType::Cons(x) => nth(n, x.into()),
         ObjectType::NIL => Ok(NIL),
@@ -630,7 +630,7 @@ defsym!(KW_TEST);
 defsym!(KW_DOCUMENTATION);
 
 #[defun]
-pub(crate) fn make_hash_table<'ob>(
+pub fn make_hash_table<'ob>(
     keyword_args: &[Object<'ob>],
     cx: &'ob Context,
 ) -> Result<Object<'ob>> {
@@ -650,12 +650,12 @@ pub(crate) fn make_hash_table<'ob>(
 }
 
 #[defun]
-pub(crate) fn hash_table_p(obj: Object) -> bool {
+pub fn hash_table_p(obj: Object) -> bool {
     matches!(obj.untag(), ObjectType::HashTable(_))
 }
 
 #[defun]
-pub(crate) fn gethash<'ob>(
+pub fn gethash<'ob>(
     key: Object<'ob>,
     table: &'ob LispHashTable,
     dflt: Option<Object<'ob>>,
@@ -667,7 +667,7 @@ pub(crate) fn gethash<'ob>(
 }
 
 #[defun]
-pub(crate) fn puthash<'ob>(
+pub fn puthash<'ob>(
     key: Object<'ob>,
     value: Object<'ob>,
     table: &'ob LispHashTable,

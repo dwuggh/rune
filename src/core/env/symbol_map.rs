@@ -5,7 +5,7 @@ use crate::core::{
 use anyhow::Result;
 use rune_core::hashmap::HashMap;
 
-pub(crate) struct SymbolMap {
+pub struct SymbolMap {
     map: SymbolMapCore,
     block: Block<true>,
 }
@@ -52,11 +52,11 @@ impl SymbolMapCore {
 }
 
 impl SymbolMap {
-    pub(crate) fn intern<'ob>(&mut self, name: &str, cx: &'ob Context) -> Symbol<'ob> {
+    pub fn intern<'ob>(&mut self, name: &str, cx: &'ob Context) -> Symbol<'ob> {
         self.map.intern(name, &self.block, cx)
     }
 
-    pub(crate) fn set_func(&self, symbol: Symbol, func: Function) -> Result<()> {
+    pub fn set_func(&self, symbol: Symbol, func: Function) -> Result<()> {
         let new_func = func.clone_in(&self.block);
         self.block.uninterned_symbol_map.clear();
         #[cfg(miri)]
@@ -66,15 +66,15 @@ impl SymbolMap {
         unsafe { symbol.set_func(new_func) }
     }
 
-    pub(crate) fn global_block(&self) -> &Block<true> {
+    pub fn global_block(&self) -> &Block<true> {
         &self.block
     }
 
-    pub(crate) fn create_buffer(&self, name: &str) -> &LispBuffer {
+    pub fn create_buffer(&self, name: &str) -> &LispBuffer {
         LispBuffer::create(name.to_owned(), &self.block)
     }
 
-    pub(crate) fn get(&self, name: &str) -> Option<Symbol> {
+    pub fn get(&self, name: &str) -> Option<Symbol> {
         self.map.get(name)
     }
 }
@@ -83,7 +83,7 @@ impl SymbolMap {
 include!(concat!(env!("OUT_DIR"), "/sym.rs"));
 
 /// Intern a new symbol based on `name`
-pub(crate) fn intern<'ob>(name: &str, cx: &'ob Context) -> Symbol<'ob> {
+pub fn intern<'ob>(name: &str, cx: &'ob Context) -> Symbol<'ob> {
     interned_symbols().lock().unwrap().intern(name, cx)
 }
 

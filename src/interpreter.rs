@@ -26,7 +26,7 @@ struct Interpreter<'brw, 'rt> {
 }
 
 #[defun]
-pub(crate) fn eval<'ob>(
+pub fn eval<'ob>(
     form: &Rto<Object>,
     lexical: Option<&Rto<Object>>,
     env: &mut Rt<Env>,
@@ -57,7 +57,7 @@ impl Interpreter<'_, '_> {
         }
     }
 
-    pub(crate) fn eval_sexp<'ob>(
+    pub fn eval_sexp<'ob>(
         &mut self,
         cons: &Rto<Gc<&Cons>>,
         cx: &'ob mut Context,
@@ -690,7 +690,7 @@ impl Interpreter<'_, '_> {
     }
 }
 
-pub(crate) fn call_closure<'ob>(
+pub fn call_closure<'ob>(
     closure: &Rto<Gc<&Cons>>,
     arg_cnt: usize,
     name: &str,
@@ -794,7 +794,7 @@ fn bind_args<'a>(
     Ok(())
 }
 
-pub(crate) fn parse_arg_list(
+pub fn parse_arg_list(
     bindings: Object,
 ) -> AnyResult<(Vec<Symbol>, Vec<Symbol>, Option<Symbol>)> {
     let mut required = Vec::new();

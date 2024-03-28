@@ -20,12 +20,12 @@ static FEATURES: OnceLock<Mutex<HashSet<Symbol<'static>>>> = OnceLock::new();
 /// to `lock()` on the Mutex.
 ///
 /// TODO: Use `LazyLock`: <https://github.com/CeleritasCelery/rune/issues/34>
-pub(crate) fn features() -> &'static Mutex<HashSet<Symbol<'static>>> {
+pub fn features() -> &'static Mutex<HashSet<Symbol<'static>>> {
     FEATURES.get_or_init(Mutex::default)
 }
 
 #[defun]
-pub(crate) fn fset<'ob>(symbol: Symbol<'ob>, definition: Object) -> Result<Symbol<'ob>> {
+pub fn fset<'ob>(symbol: Symbol<'ob>, definition: Object) -> Result<Symbol<'ob>> {
     if definition.is_nil() {
         symbol.unbind_func();
     } else {
@@ -37,7 +37,7 @@ pub(crate) fn fset<'ob>(symbol: Symbol<'ob>, definition: Object) -> Result<Symbo
 }
 
 #[defun]
-pub(crate) fn defalias<'ob>(
+pub fn defalias<'ob>(
     symbol: Symbol<'ob>,
     definition: Object,
     _docstring: Option<&str>,
@@ -46,7 +46,7 @@ pub(crate) fn defalias<'ob>(
 }
 
 #[defun]
-pub(crate) fn set<'ob>(
+pub fn set<'ob>(
     place: Symbol,
     newlet: Object<'ob>,
     env: &mut Rt<Env>,
@@ -56,7 +56,7 @@ pub(crate) fn set<'ob>(
 }
 
 #[defun]
-pub(crate) fn put<'ob>(
+pub fn put<'ob>(
     symbol: Symbol,
     propname: Symbol,
     value: Object<'ob>,
@@ -67,7 +67,7 @@ pub(crate) fn put<'ob>(
 }
 
 #[defun]
-pub(crate) fn get<'ob>(
+pub fn get<'ob>(
     symbol: Symbol,
     propname: Symbol,
     env: &Rt<Env>,
@@ -83,13 +83,13 @@ pub(crate) fn get<'ob>(
 }
 
 #[defun]
-pub(crate) fn local_variable_if_set_p(_sym: Symbol) -> bool {
+pub fn local_variable_if_set_p(_sym: Symbol) -> bool {
     // TODO: Implement buffer locals
     false
 }
 
 #[defun]
-pub(crate) fn default_value<'ob>(
+pub fn default_value<'ob>(
     symbol: Symbol,
     env: &Rt<Env>,
     cx: &'ob Context,
@@ -99,7 +99,7 @@ pub(crate) fn default_value<'ob>(
 }
 
 #[defun]
-pub(crate) fn symbol_function<'ob>(symbol: Symbol, cx: &'ob Context) -> Object<'ob> {
+pub fn symbol_function<'ob>(symbol: Symbol, cx: &'ob Context) -> Object<'ob> {
     match symbol.func(cx) {
         Some(f) => f.into(),
         None => NIL,
@@ -107,7 +107,7 @@ pub(crate) fn symbol_function<'ob>(symbol: Symbol, cx: &'ob Context) -> Object<'
 }
 
 #[defun]
-pub(crate) fn symbol_value<'ob>(
+pub fn symbol_value<'ob>(
     symbol: Symbol,
     env: &Rt<Env>,
     cx: &'ob Context,
@@ -116,59 +116,59 @@ pub(crate) fn symbol_value<'ob>(
 }
 
 #[defun]
-pub(crate) fn symbol_name(symbol: Symbol<'_>) -> &str {
+pub fn symbol_name(symbol: Symbol<'_>) -> &str {
     symbol.get().name()
 }
 
 #[defun]
-pub(crate) fn null(obj: Object) -> bool {
+pub fn null(obj: Object) -> bool {
     obj.is_nil()
 }
 
 #[defun]
-pub(crate) fn fboundp(symbol: Symbol) -> bool {
+pub fn fboundp(symbol: Symbol) -> bool {
     symbol.has_func()
 }
 
 #[defun]
-pub(crate) fn fmakunbound(symbol: Symbol) -> Symbol {
+pub fn fmakunbound(symbol: Symbol) -> Symbol {
     symbol.unbind_func();
     symbol
 }
 
 #[defun]
-pub(crate) fn boundp(symbol: Symbol, env: &Rt<Env>) -> bool {
+pub fn boundp(symbol: Symbol, env: &Rt<Env>) -> bool {
     env.vars.get(symbol).is_some()
 }
 
 #[defun]
-pub(crate) fn makunbound<'ob>(symbol: Symbol<'ob>, env: &mut Rt<Env>) -> Symbol<'ob> {
+pub fn makunbound<'ob>(symbol: Symbol<'ob>, env: &mut Rt<Env>) -> Symbol<'ob> {
     env.vars.remove(symbol);
     symbol
 }
 
 #[defun]
-pub(crate) fn default_boundp(symbol: Symbol, env: &Rt<Env>) -> bool {
+pub fn default_boundp(symbol: Symbol, env: &Rt<Env>) -> bool {
     env.vars.get(symbol).is_some()
 }
 
 #[defun]
-pub(crate) fn listp(object: Object) -> bool {
+pub fn listp(object: Object) -> bool {
     matches!(object.untag(), ObjectType::NIL | ObjectType::Cons(_))
 }
 
 #[defun]
-pub(crate) fn nlistp(object: Object) -> bool {
+pub fn nlistp(object: Object) -> bool {
     !listp(object)
 }
 
 #[defun]
-pub(crate) fn symbolp(object: Object) -> bool {
+pub fn symbolp(object: Object) -> bool {
     matches!(object.untag(), ObjectType::Symbol(_))
 }
 
 #[defun]
-pub(crate) fn functionp(object: Object) -> bool {
+pub fn functionp(object: Object) -> bool {
     match object.untag() {
         ObjectType::ByteFn(_) | ObjectType::SubrFn(_) => true,
         ObjectType::Cons(cons) => cons.car() == sym::CLOSURE,
@@ -178,43 +178,43 @@ pub(crate) fn functionp(object: Object) -> bool {
 }
 
 #[defun]
-pub(crate) fn subrp(object: Object) -> bool {
+pub fn subrp(object: Object) -> bool {
     matches!(object.untag(), ObjectType::SubrFn(_))
 }
 
 #[defun]
-pub(crate) fn stringp(object: Object) -> bool {
+pub fn stringp(object: Object) -> bool {
     matches!(object.untag(), ObjectType::String(_))
 }
 
 #[defun]
-pub(crate) fn numberp(object: Object) -> bool {
+pub fn numberp(object: Object) -> bool {
     matches!(object.untag(), ObjectType::Int(_) | ObjectType::Float(_))
 }
 
 #[defun]
-pub(crate) fn markerp(_: Object) -> bool {
+pub fn markerp(_: Object) -> bool {
     // TODO: implement
     false
 }
 
 #[defun]
-pub(crate) fn vectorp(object: Object) -> bool {
+pub fn vectorp(object: Object) -> bool {
     matches!(object.untag(), ObjectType::Vec(_))
 }
 
 #[defun]
-pub(crate) fn recordp(object: Object) -> bool {
+pub fn recordp(object: Object) -> bool {
     matches!(object.untag(), ObjectType::Record(_))
 }
 
 #[defun]
-pub(crate) fn consp(object: Object) -> bool {
+pub fn consp(object: Object) -> bool {
     matches!(object.untag(), ObjectType::Cons(_))
 }
 
 #[defun]
-pub(crate) fn keywordp(object: Object) -> bool {
+pub fn keywordp(object: Object) -> bool {
     match object.untag() {
         ObjectType::Symbol(s) => s.name().starts_with(':'),
         _ => false,
@@ -222,17 +222,17 @@ pub(crate) fn keywordp(object: Object) -> bool {
 }
 
 #[defun]
-pub(crate) fn integerp(object: Object) -> bool {
+pub fn integerp(object: Object) -> bool {
     matches!(object.untag(), ObjectType::Int(_))
 }
 
 #[defun]
-pub(crate) fn floatp(object: Object) -> bool {
+pub fn floatp(object: Object) -> bool {
     matches!(object.untag(), ObjectType::Float(_))
 }
 
 #[defun]
-pub(crate) fn atom(object: Object) -> bool {
+pub fn atom(object: Object) -> bool {
     !consp(object)
 }
 
@@ -253,7 +253,7 @@ fn bufferp(_object: Object) -> bool {
 }
 
 #[defun]
-pub(crate) fn multibyte_string_p(object: Object) -> bool {
+pub fn multibyte_string_p(object: Object) -> bool {
     matches!(object.untag(), ObjectType::String(_))
 }
 
@@ -272,7 +272,7 @@ fn string_to_number<'ob>(string: &str, base: Option<i64>, cx: &'ob Context) -> N
 }
 
 #[defun]
-pub(crate) fn defvar<'ob>(
+pub fn defvar<'ob>(
     symbol: Symbol,
     initvalue: Option<Object<'ob>>,
     _docstring: Option<&str>,
@@ -283,7 +283,7 @@ pub(crate) fn defvar<'ob>(
 }
 
 #[defun]
-pub(crate) fn make_variable_buffer_local(variable: Symbol) -> Symbol {
+pub fn make_variable_buffer_local(variable: Symbol) -> Symbol {
     // TODO: Implement
     variable
 }
@@ -313,7 +313,7 @@ fn ash(value: i64, count: i64) -> i64 {
 }
 
 #[defun]
-pub(crate) fn aset<'ob>(
+pub fn aset<'ob>(
     array: Object<'ob>,
     idx: usize,
     newlet: Object<'ob>,
@@ -344,7 +344,7 @@ pub(crate) fn aset<'ob>(
 }
 
 #[defun]
-pub(crate) fn aref<'ob>(array: Object<'ob>, idx: usize, cx: &'ob Context) -> Result<Object<'ob>> {
+pub fn aref<'ob>(array: Object<'ob>, idx: usize, cx: &'ob Context) -> Result<Object<'ob>> {
     match array.untag() {
         ObjectType::Vec(vec) => match vec.get(idx) {
             Some(x) => Ok(x.get()),
@@ -400,7 +400,7 @@ fn type_of(object: Object) -> Object {
 }
 
 #[defun]
-pub(crate) fn indirect_function<'ob>(object: Object<'ob>, cx: &'ob Context) -> Object<'ob> {
+pub fn indirect_function<'ob>(object: Object<'ob>, cx: &'ob Context) -> Object<'ob> {
     match object.untag() {
         ObjectType::Symbol(sym) => match sym.follow_indirect(cx) {
             Some(func) => func.into(),
@@ -411,7 +411,7 @@ pub(crate) fn indirect_function<'ob>(object: Object<'ob>, cx: &'ob Context) -> O
 }
 
 #[defun]
-pub(crate) fn provide<'ob>(feature: Symbol<'ob>, _subfeatures: Option<&Cons>) -> Symbol<'ob> {
+pub fn provide<'ob>(feature: Symbol<'ob>, _subfeatures: Option<&Cons>) -> Symbol<'ob> {
     let mut features = features().lock().unwrap();
     // TODO: SYMBOL - need to trace this
     let feat = unsafe { feature.with_lifetime() };
@@ -420,7 +420,7 @@ pub(crate) fn provide<'ob>(feature: Symbol<'ob>, _subfeatures: Option<&Cons>) ->
 }
 
 #[defun]
-pub(crate) fn car(list: List) -> Object {
+pub fn car(list: List) -> Object {
     match list.untag() {
         ListType::Cons(cons) => cons.car(),
         ListType::Nil => NIL,
@@ -428,7 +428,7 @@ pub(crate) fn car(list: List) -> Object {
 }
 
 #[defun]
-pub(crate) fn cdr(list: List) -> Object {
+pub fn cdr(list: List) -> Object {
     match list.untag() {
         ListType::Cons(cons) => cons.cdr(),
         ListType::Nil => NIL,
@@ -436,7 +436,7 @@ pub(crate) fn cdr(list: List) -> Object {
 }
 
 #[defun]
-pub(crate) fn car_safe(object: Object) -> Object {
+pub fn car_safe(object: Object) -> Object {
     match object.untag() {
         ObjectType::Cons(cons) => cons.car(),
         _ => NIL,
@@ -444,7 +444,7 @@ pub(crate) fn car_safe(object: Object) -> Object {
 }
 
 #[defun]
-pub(crate) fn cdr_safe(object: Object) -> Object {
+pub fn cdr_safe(object: Object) -> Object {
     match object.untag() {
         ObjectType::Cons(cons) => cons.cdr(),
         _ => NIL,
@@ -452,19 +452,19 @@ pub(crate) fn cdr_safe(object: Object) -> Object {
 }
 
 #[defun]
-pub(crate) fn setcar<'ob>(cell: &Cons, newcar: Object<'ob>) -> Result<Object<'ob>> {
+pub fn setcar<'ob>(cell: &Cons, newcar: Object<'ob>) -> Result<Object<'ob>> {
     cell.set_car(newcar)?;
     Ok(newcar)
 }
 
 #[defun]
-pub(crate) fn setcdr<'ob>(cell: &Cons, newcdr: Object<'ob>) -> Result<Object<'ob>> {
+pub fn setcdr<'ob>(cell: &Cons, newcdr: Object<'ob>) -> Result<Object<'ob>> {
     cell.set_cdr(newcdr)?;
     Ok(newcdr)
 }
 
 #[defun]
-pub(crate) fn cons<'ob>(car: Object, cdr: Object, cx: &'ob Context) -> Object<'ob> {
+pub fn cons<'ob>(car: Object, cdr: Object, cx: &'ob Context) -> Object<'ob> {
     Cons::new(car, cdr, cx).into()
 }
 
