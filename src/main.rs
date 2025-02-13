@@ -33,6 +33,8 @@ mod textprops;
 mod threads;
 mod timefns;
 
+mod gui;
+
 use crate::core::{
     env::{intern, sym, Env},
     gc::{Context, RootSet, Rt},
@@ -54,10 +56,13 @@ struct Args {
     no_bootstrap: bool,
     #[arg(long)]
     eval_stdin: bool,
+    #[arg(long)]
+    gui: bool,
 }
 
 fn main() -> Result<(), ()> {
     let args = Args::parse();
+    println!("{:?}", args);
 
     let roots = &RootSet::default();
     let cx = &mut Context::new(roots);
@@ -82,6 +87,11 @@ fn main() -> Result<(), ()> {
 
     if args.repl {
         repl(env, cx);
+    }
+
+    if args.gui {
+        // create UI thread, recv&resp events
+        gui::gui(env, cx).unwrap();
     }
     Ok(())
 }
