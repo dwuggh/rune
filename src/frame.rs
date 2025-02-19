@@ -50,37 +50,85 @@ pub struct Frame {
 pub struct FrameLayout {
     pub tree: TaffyTree<()>,
     pub root: NodeId,
+    pub external_border: NodeId,
+    pub title_bar: NodeId,
+    pub menu_bar: NodeId,
+    pub tool_bar: NodeId,
+    pub tab_bar: NodeId,
+    pub internal_border: NodeId,
     pub main: NodeId,
 }
 
 impl FrameLayout {
     pub fn new(width: f32, height: f32) -> Self {
         let mut tree = TaffyTree::new();
-        let style = Style {
-            // flex_direction: FlexDirection::Row,
-            flex_grow: 1.0,
-            size: Size {
-                width: length(width),
-                height: length(height),
-            },
-            flex_direction: FlexDirection::Row,
-            justify_content: Some(JustifyContent::Stretch),
+        
+        // Create root node
+        let root = tree.new_leaf(Style {
+            size: Size { width: length(width), height: length(height) },
+            flex_direction: FlexDirection::Column,
             ..Default::default()
-        };
-        let root = tree.new_leaf(style).unwrap();
-        let main = tree
-            .new_leaf(Style {
-                flex_grow: 1.0,
-                flex_direction: FlexDirection::Row,
-                justify_content: Some(JustifyContent::Stretch),
-                ..Default::default()
-            })
-            .unwrap();
+        }).unwrap();
+
+        // Create frame components
+        let external_border = tree.new_leaf(Style {
+            size: Size { width: length(width), height: length(2.0) },
+            ..Default::default()
+        }).unwrap();
+
+        let title_bar = tree.new_leaf(Style {
+            size: Size { width: length(width), height: length(30.0) },
+            ..Default::default()
+        }).unwrap();
+
+        let menu_bar = tree.new_leaf(Style {
+            size: Size { width: length(width), height: length(25.0) },
+            ..Default::default()
+        }).unwrap();
+
+        let tool_bar = tree.new_leaf(Style {
+            size: Size { width: length(width), height: length(40.0) },
+            ..Default::default()
+        }).unwrap();
+
+        let tab_bar = tree.new_leaf(Style {
+            size: Size { width: length(width), height: length(30.0) },
+            ..Default::default()
+        }).unwrap();
+
+        let internal_border = tree.new_leaf(Style {
+            size: Size { width: length(width), height: length(2.0) },
+            ..Default::default()
+        }).unwrap();
+
+        let main = tree.new_leaf(Style {
+            size: Size { width: length(width), height: length(height - 127.0) }, // 127 = sum of other components
+            flex_grow: 1.0,
+            ..Default::default()
+        }).unwrap();
+
+        // Build the layout tree
+        tree.add_child(root, external_border).unwrap();
+        tree.add_child(root, title_bar).unwrap();
+        tree.add_child(root, menu_bar).unwrap();
+        tree.add_child(root, tool_bar).unwrap();
+        tree.add_child(root, tab_bar).unwrap();
+        tree.add_child(root, internal_border).unwrap();
         tree.add_child(root, main).unwrap();
 
         tree.compute_layout(root, Size::max_content()).unwrap();
 
-        FrameLayout { tree, root, main }
+        FrameLayout {
+            tree,
+            root,
+            external_border,
+            title_bar,
+            menu_bar,
+            tool_bar,
+            tab_bar,
+            internal_border,
+            main,
+        }
     }
 
     pub fn get(&self, id: NodeId) -> anyhow::Result<&Layout> {
