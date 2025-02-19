@@ -1,5 +1,4 @@
 
-// we use rgui-events for gui-core communicating. In this file, we need to define emacs's frame object, and compute the layout. We already have some code as below. The frame's layout is as in the follow diagram. Complete the design. AI!
 //         <------------ Outer Frame Width ----------->
 //         ____________________________________________
 //      ^(0)  ________ External/Outer Border _______   |
