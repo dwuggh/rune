@@ -14,24 +14,28 @@ mod cell;
 mod chartab;
 mod convert;
 mod float;
+mod frame;
 mod func;
 mod hashtable;
 mod string;
 mod symbol;
 mod tagged;
 mod vector;
+mod window;
 
 pub(crate) use buffer::*;
 pub(super) use cell::*;
 pub(crate) use chartab::*;
 pub(crate) use convert::*;
 pub(crate) use float::*;
+pub(crate) use frame::*;
 pub(crate) use func::*;
 pub(crate) use hashtable::*;
 pub(crate) use string::*;
 pub(crate) use symbol::*;
 pub(crate) use tagged::*;
 pub(crate) use vector::*;
+pub(crate) use window::*;
 
 use std::fmt::Write as _;
 

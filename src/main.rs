@@ -34,7 +34,9 @@ mod textprops;
 mod threads;
 mod timefns;
 
+mod frame;
 mod gui;
+mod window;
 
 use crate::core::{
     env::{Env, intern, sym},

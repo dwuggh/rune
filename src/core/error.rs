@@ -19,6 +19,7 @@ pub(crate) enum Type {
     Number,
     List,
     Buffer,
+    Frame,
     CharTable,
 }
 

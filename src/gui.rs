@@ -1,11 +1,17 @@
-use std::{io::{Read, Write}, net::TcpStream};
-use rgui_events::{Event, Command, serde_json};
+use rgui_events::{serde_json, Command, Event};
+use std::{
+    io::{Read, Write},
+    net::TcpStream,
+};
 
-use crate::{buffer::get_buffer_create, core::{env::ArgSlice, object::ObjectType}, editfns::insert, Context, Env, Rt};
+use crate::{
+    buffer::get_buffer_create,
+    core::{env::ArgSlice, object::ObjectType},
+    editfns::insert,
+    Context, Env, Rt,
+};
 
-
-
-pub fn gui(env: &mut Rt<Env>, cx: &mut Context) -> anyhow::Result<()>{
+pub fn gui(env: &mut Rt<Env>, cx: &mut Context) -> anyhow::Result<()> {
     let listener = std::net::TcpListener::bind("127.0.0.1:26789")?;
     println!("GUI server listening on 127.0.0.1:26789");
     let (mut stream, socket_addr) = listener.accept()?;
@@ -35,18 +41,14 @@ pub fn gui(env: &mut Rt<Env>, cx: &mut Context) -> anyhow::Result<()>{
                     let text = &buf.text;
                     let buf_len = text.len_chars();
                     if start > buf_len {
-                        continue;   
+                        continue;
                     }
-                    let end = if start + len as usize > buf_len {
-                        buf_len
-                    } else {
-                        start + len as usize
-                    };
+                    let end =
+                        if start + len as usize > buf_len { buf_len } else { start + len as usize };
                     let (a, b) = text.slice(start..end);
                     let content = format!("{}{}", a, b);
                     let cmd = Command::GridInsert { id: 0, pos: start as u64, content };
                     stream.write(&serde_json::to_vec(&cmd)?)?;
-
                 }
                 Event::RequestCursorChange(cursor_change) => {
                     let command = Command::CursorChange(cursor_change);
@@ -56,6 +58,4 @@ pub fn gui(env: &mut Rt<Env>, cx: &mut Context) -> anyhow::Result<()>{
             }
         }
     }
-
 }
-

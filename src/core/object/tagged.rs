@@ -4,7 +4,7 @@ use super::{
         error::{Type, TypeError},
         gc::Block,
     },
-    ByteFnPrototype, ByteString, CharTableInner, GcString, LispBuffer,
+    ByteFnPrototype, ByteString, CharTableInner, GcString, LispBuffer, LispFrame,
 };
 use super::{
     ByteFn, CharTable, HashTable, LispFloat, LispHashTable, LispString, LispVec, Record,
@@ -292,6 +292,7 @@ object_trait_impls!(LispVec);
 object_trait_impls!(Record);
 object_trait_impls!(LispHashTable);
 object_trait_impls!(LispBuffer);
+object_trait_impls!(LispFrame);
 object_trait_impls!(CharTable);
 
 /// Trait for types that can be managed by the GC. This trait is implemented for
@@ -535,6 +536,7 @@ mod private {
         ByteFn,
         Buffer,
         CharTable,
+        Frame,
     }
 
     /// Trait for tagged pointers. Anything that can be stored and passed around
@@ -642,6 +644,7 @@ impl<'a> TaggedPtr for ObjectType<'a> {
                 Tag::HashTable => ObjectType::HashTable(<&LispHashTable>::from_obj_ptr(ptr)),
                 Tag::Buffer => ObjectType::Buffer(<&LispBuffer>::from_obj_ptr(ptr)),
                 Tag::CharTable => ObjectType::CharTable(<&CharTable>::from_obj_ptr(ptr)),
+                Tag::Frame => ObjectType::Frame(<&LispFrame>::from_obj_ptr(ptr)),
             }
         }
     }
@@ -660,6 +663,7 @@ impl<'a> TaggedPtr for ObjectType<'a> {
             ObjectType::ByteFn(x) => TaggedPtr::tag(x).into(),
             ObjectType::SubrFn(x) => TaggedPtr::tag(x).into(),
             ObjectType::Buffer(x) => TaggedPtr::tag(x).into(),
+            ObjectType::Frame(x) => TaggedPtr::tag(x).into(),
             ObjectType::CharTable(x) => TaggedPtr::tag(x).into(),
         }
     }
@@ -915,6 +919,18 @@ impl TaggedPtr for &LispBuffer {
     }
 }
 
+impl TaggedPtr for &LispFrame {
+    type Ptr = LispFrame;
+    const TAG: Tag = Tag::Frame;
+    unsafe fn from_obj_ptr(ptr: *const u8) -> Self {
+        &*ptr.cast::<Self::Ptr>()
+    }
+
+    fn get_ptr(self) -> *const Self::Ptr {
+        self as *const Self::Ptr
+    }
+}
+
 impl TaggedPtr for &CharTable {
     type Ptr = CharTable;
     const TAG: Tag = Tag::CharTable;
@@ -942,6 +958,7 @@ impl<T> TracePtr for Gc<T> {
             ObjectType::Symbol(x) => x.trace(state),
             ObjectType::ByteFn(x) => x.trace(state),
             ObjectType::Buffer(x) => x.trace(state),
+            ObjectType::Frame(x) => x.trace(state),
             ObjectType::CharTable(x) => x.trace(state),
         }
     }
@@ -1060,6 +1077,7 @@ pub(crate) enum ObjectType<'ob> {
     SubrFn(&'static SubrFn) = Tag::SubrFn as u8,
     Buffer(&'static LispBuffer) = Tag::Buffer as u8,
     CharTable(&'static CharTable) = Tag::CharTable as u8,
+    Frame(&'static LispFrame) = Tag::Frame as u8,
 }
 
 /// The Object defintion that contains all other possible lisp objects. This
@@ -1081,6 +1099,7 @@ cast_gc!(ObjectType<'ob> => NumberType<'ob>,
          &'ob ByteFn,
          &'ob SubrFn,
          &'ob LispBuffer,
+         &'ob LispFrame,
          &'ob CharTable
 );
 
@@ -1101,6 +1120,7 @@ impl ObjectType<'_> {
             ObjectType::ByteString(_) => Type::String,
             ObjectType::ByteFn(_) | ObjectType::SubrFn(_) => Type::Func,
             ObjectType::Buffer(_) => Type::Buffer,
+            ObjectType::Frame(_) => Type::Frame,
             ObjectType::CharTable(_) => Type::CharTable,
         }
     }
@@ -1343,6 +1363,17 @@ impl<'ob> TryFrom<Object<'ob>> for Gc<&'ob LispBuffer> {
     }
 }
 
+impl<'ob> TryFrom<Object<'ob>> for Gc<&'ob LispFrame> {
+    type Error = TypeError;
+
+    fn try_from(value: Object<'ob>) -> Result<Self, Self::Error> {
+        match value.get_tag() {
+            Tag::Frame => unsafe { Ok(cast_gc(value)) },
+            _ => Err(TypeError::new(Type::Frame, value)),
+        }
+    }
+}
+
 impl<'ob> TryFrom<Object<'ob>> for Gc<&'ob CharTable> {
     type Error = TypeError;
 
@@ -1389,6 +1420,7 @@ where
             ObjectType::Record(x) => x.clone_in(bk).into(),
             ObjectType::HashTable(x) => x.clone_in(bk).into(),
             ObjectType::Buffer(x) => x.clone_in(bk).into(),
+            ObjectType::Frame(x) => x.clone_in(bk).into(),
             ObjectType::CharTable(x) => x.clone_in(bk).into(),
         };
         let Ok(x) = Gc::<U>::try_from(obj) else { unreachable!() };
@@ -1423,6 +1455,7 @@ impl GcMoveable for Object<'_> {
             ObjectType::ByteString(x) => cast_pair(x.move_value(to_space)?),
             ObjectType::ByteFn(x) => cast_pair(x.move_value(to_space)?),
             ObjectType::Buffer(x) => cast_pair(x.move_value(to_space)?),
+            ObjectType::Frame(x) => cast_pair(x.move_value(to_space)?),
             ObjectType::Symbol(x) => {
                 // Need to handle specially because a symbol is not a pointer,
                 // but rather an offset
@@ -1632,6 +1665,7 @@ impl ObjectType<'_> {
             ObjectType::SubrFn(x) => D::fmt(x, f),
             ObjectType::Float(x) => D::fmt(x, f),
             ObjectType::Buffer(x) => D::fmt(x, f),
+            ObjectType::Frame(x) => todo!(),
             ObjectType::CharTable(x) => D::fmt(x, f),
         }
     }
