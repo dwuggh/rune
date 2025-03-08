@@ -24,10 +24,10 @@ use std::sync::{LazyLock, Mutex};
 use crate::{
     core::{
         env::{intern, Env, INTERNED_SYMBOLS},
-        gc::{Context, Rt, Slot},
-        object::{LispFrame, Object, ObjectType, Symbol, NIL},
+        gc::{Context, IntoRoot, Rt, Slot},
+        object::{LispFrame, Object, ObjectType, Symbol, WindowConfig, WithLifetime, NIL},
     },
-    window::Window,
+    Gc,
 };
 use anyhow::Result;
 use rune_core::{hashmap::HashMap, macros::list};
@@ -38,7 +38,7 @@ type FrameMap = HashMap<String, &'static LispFrame>;
 pub(crate) static FRAMES: LazyLock<Mutex<FrameMap>> = LazyLock::new(Mutex::default);
 
 #[derive(Debug)]
-pub struct Frame {
+pub struct FrameConfig {
     /* Name of this frame: a Lisp string.  It is used for looking up resources,
     as well as for the title in some cases.  */
     pub name: String,
@@ -51,7 +51,7 @@ pub struct Frame {
     pub layout: FrameLayout,
 
     /// collection of windows. window id is converted from taffy's `NodeId`.
-    pub windows: HashMap<u64, Window>,
+    pub windows: HashMap<u64, WindowConfig>,
 
     pub selected_window: u64,
 
@@ -208,7 +208,7 @@ impl FrameLayout {
     }
 }
 
-impl Frame {
+impl FrameConfig {
     pub fn new(width: f32, height: f32) -> Self {
         let layout = FrameLayout::new(width, height);
         Self {
@@ -231,18 +231,29 @@ fn framep(object: Object) -> bool {
 }
 
 #[defun]
-pub fn make_frame<'ob>(
+fn frame_live_p(object: Object) -> bool {
+    // TODO
+    matches!(object.untag(), ObjectType::Frame(_))
+}
+
+#[defun]
+fn window_system<'ob>(frame: Object<'ob>, cx: &'ob Context<'ob>) -> Object<'ob> {
+    cx.add(intern("rune", cx))
+}
+
+#[defun]
+pub fn make_terminal_frame<'ob>(
     parameters: Option<Object>,
     cx: &'ob Context,
     env: &mut Rt<Env>,
 ) -> Result<Object<'ob>> {
     // TODO width and height should be obtained from parameters
     // and various default parameters
-    let mut width = 800.0; // Default width
-    let mut height = 600.0; // Default height
+    let width = 800.0; // Default width
+    let height = 600.0; // Default height
 
     // Create a new frame with the specified or default dimensions
-    let frame = Frame::new(width, height);
+    let frame = FrameConfig::new(width, height);
     let lispframe: &'static LispFrame = {
         let global = INTERNED_SYMBOLS.lock().unwrap();
         let params = Slot::new(parameters.unwrap_or(NIL));
@@ -255,6 +266,20 @@ pub fn make_frame<'ob>(
     Ok(result)
 }
 
+#[defun]
+fn select_frame(frame: Object, _norecord: Option<bool>, env: &mut Rt<Env>) {
+    // TODO how to deal with slot?
+    env.selected_frame = Some(unsafe { frame.into_root() })
+}
+
+#[defun]
+fn selected_frame<'ob>(env: &'ob Rt<Env>) -> Object<'ob> {
+    env.selected_frame
+        .as_ref()
+        .map(|f| unsafe { (**f).with_lifetime() })
+        .unwrap_or(NIL)
+}
+
 /// NOTE this function is implemented in elisp because it is gui platform-specific.
 ///
 /// Return geometric attributes of FRAME.
@@ -265,12 +290,13 @@ fn frame_geometry<'ob>(
     cx: &'ob Context,
     env: &mut Rt<Env>,
 ) -> Result<Object<'ob>> {
-    if let Some(f) = frame
-        .and_then(|f| match f.untag() {
-            ObjectType::Frame(f) => Some(f),
-            _ => None,
-        })
-        .or(env.selected_frame)
+    if let Some(f) =
+        frame
+            .or(env.selected_frame.as_ref().map(|f| **f))
+            .and_then(|f| match f.untag() {
+                ObjectType::Frame(f) => Some(f),
+                _ => None,
+            })
     {
         let data = f.data();
         let outpos = data.layout.get(data.layout.root)?;
@@ -313,8 +339,18 @@ fn frame_geometry<'ob>(
 }
 
 #[defun]
-fn modify_frame_parameters<'ob>(frame: Object<'ob>, parameters: Object<'ob>, cx: &'ob Context, env: &mut Rt<Env>) {
+fn modify_frame_parameters<'ob>(
+    frame: Object<'ob>,
+    parameters: Object<'ob>,
+    cx: &'ob Context,
+    env: &mut Rt<Env>,
+) {
     todo!()
 }
 
-
+fn as_frame(object: Object) -> Option<&LispFrame> {
+    match object.untag() {
+        ObjectType::Frame(f) => Some(f),
+        _ => None,
+    }
+}

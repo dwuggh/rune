@@ -23,7 +23,7 @@ pub(crate) struct Env<'a> {
     #[no_trace]
     pub(crate) current_buffer: CurrentBuffer<'a>,
     #[no_trace]
-    pub(crate) selected_frame: Option<&'a LispFrame>,
+    pub(crate) selected_frame: Option<Slot<Object<'a>>>,
     pub(crate) stack: LispStack<'a>,
 }
 

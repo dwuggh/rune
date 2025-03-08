@@ -20,6 +20,7 @@ pub(crate) enum Type {
     List,
     Buffer,
     Frame,
+    Window,
     CharTable,
 }
 
