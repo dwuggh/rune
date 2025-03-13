@@ -1,9 +1,14 @@
 //! Search utilities.
-use crate::core::{
-    cons::Cons,
-    env::Env,
-    gc::{Context, Rt},
-    object::{List, NIL, Object, ObjectType, OptionalFlag},
+use std::ptr::eq;
+
+use crate::{
+    core::{
+        cons::Cons,
+        env::Env,
+        gc::{Context, Rt},
+        object::{List, NIL, Object, ObjectType, OptionalFlag},
+    },
+    sym,
 };
 use anyhow::{Result, bail, ensure};
 use fallible_iterator::FallibleIterator;
@@ -170,6 +175,102 @@ fn match_data__translate(n: i64, env: &Rt<Env>, cx: &Context) -> Result<()> {
         }
     }
     Ok(())
+}
+
+#[defun]
+fn re_search_forward<'ob>(
+    regexp: &str,
+    bound: Option<usize>,
+    noerror: Option<Object<'ob>>,
+    count: Option<usize>,
+    env: &mut Rt<Env>,
+    cx: &'ob Context,
+) -> Result<Object<'ob>> {
+    let count = count.unwrap_or(0);
+    let noerror = noerror.unwrap_or(NIL);
+    search_command(regexp, bound, count, noerror, true, env, cx)
+}
+
+#[defun]
+fn re_search_backward<'ob>(
+    regexp: &str,
+    bound: Option<usize>,
+    noerror: Option<Object<'ob>>,
+    count: Option<usize>,
+    env: &mut Rt<Env>,
+    cx: &'ob Context,
+) -> Result<Object<'ob>> {
+    let count = count.unwrap_or(0);
+    let noerror = noerror.unwrap_or(NIL);
+    search_command(regexp, bound, count, noerror, false, env, cx)
+}
+
+fn search_command<'ob>(
+    regexp: &str,
+    bound: Option<usize>,
+    count: usize,
+    noerror: Object<'ob>,
+    forward: bool,
+    env: &mut Rt<Env>,
+    cx: &'ob Context,
+) -> Result<Object<'ob>> {
+    let point_new = search_command_inner(regexp, bound, count, forward, env);
+    let buf = env.current_buffer.get_mut();
+    let point_new = point_new.map(|p| {
+        buf.text.set_cursor(p);
+        cx.add(p)
+    });
+    if noerror.is_nil() {
+        point_new
+    } else if noerror == sym::TRUE {
+        Ok(point_new.unwrap_or(NIL))
+    } else {
+        // move to the limit of search and return nil
+        let point_min = 1;
+        let point_max = buf.text.len_chars() + 1;
+        Ok(point_new.unwrap_or_else(|_e| {
+            let bound = bound.unwrap_or(if forward { point_max } else { point_min });
+            buf.text.set_cursor(bound);
+            NIL
+        }))
+    }
+}
+
+fn search_command_inner(
+    regexp: &str,
+    bound: Option<usize>,
+    count: usize,
+    forward: bool,
+    env: &mut Rt<Env>,
+) -> Result<usize> {
+    let buf = env.current_buffer.get_mut();
+    let re = Regex::new(&lisp_regex_to_rust(regexp))?;
+    let point = buf.text.cursor().chars();
+    let min = bound.unwrap_or(1);
+    let point_max = buf.text.len_chars() + 1;
+    let max = bound.unwrap_or(point_max).min(point_max);
+    let (beg, end) = if forward { (point, max) } else { (min, point) };
+
+    buf.text.move_gap_out_of(beg..end);
+    let (text, _) = buf.text.slice(beg..end);
+    let mut iter = re.captures_iter(text);
+    let item = if forward {
+        // TODO better ways?
+        let vec: Vec<_> = iter.collect();
+        vec.into_iter().rev().nth(count)
+    } else {
+        iter.nth(count)
+    };
+    match item {
+        Some(it) => {
+            let it = it?;
+            let end = it.get(0).unwrap().end();
+            let point_new = if forward { point + end } else { point - (text.len() - end) };
+            // buf.text.set_cursor(point_new);
+            Ok(point_new)
+        }
+        None => bail!("search failed"),
+    }
 }
 
 #[cfg(test)]
