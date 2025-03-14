@@ -33,14 +33,14 @@ mod search;
 mod textprops;
 mod threads;
 mod timefns;
-
 mod cmds;
+mod faces;
 mod frame;
 mod gui;
 mod window;
 
 use crate::core::{
-    env::{Env, intern, sym},
+    env::{intern, sym, Env},
     gc::{Context, RootSet, Rt},
     object::{Gc, LispString, NIL},
 };

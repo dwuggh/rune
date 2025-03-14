@@ -35,7 +35,8 @@ clap = { version = "4.5.4", features = ["derive"] }
 text-buffer = { version = "0.1.0", path = "crates/text-buffer" }
 rune-core = { version = "0.1.0", path = "crates/rune-core" }
 rune-macros = { version = "0.1.0", path = "crates/rune-macros" }
-interval-tree ={ version = "0.1.0", path = "crates/interval-tree" }
+interval-tree = { version = "0.1.0", path = "crates/interval-tree" }
+face-types = { path = "../face-types" }
 
 [dependencies]
 anyhow = { workspace = true }
@@ -59,6 +60,7 @@ libc = "0.2.153"
 base64 = "0.22.1"
 interval-tree = { workspace = true }
 rgui-events ={ path = "../rgui/rgui-events" }
+face-types ={ workspace = true }
 taffy = "0.7.7"
 tokio = { version = "1", features = ["full"] }
 
