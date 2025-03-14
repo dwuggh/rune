@@ -1,38 +1,83 @@
 use rgui_events::{serde_json, Command, Event};
-use std::{
-    io::{Read, Write},
-    net::TcpStream,
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::{TcpListener, TcpStream},
+    sync::mpsc,
 };
 
 use crate::{
-    buffer::get_buffer_create,
-    core::{env::ArgSlice, object::ObjectType},
-    editfns::insert,
-    Context, Env, Rt,
+    buffer::{self, get_buffer_create}, core::{env::ArgSlice, object::ObjectType}, editfns::insert, load, Context, Env, Rt, NIL
 };
 
-pub fn gui(env: &mut Rt<Env>, cx: &mut Context) -> anyhow::Result<()> {
-    let listener = std::net::TcpListener::bind("127.0.0.1:26789")?;
-    println!("GUI server listening on 127.0.0.1:26789");
-    let (mut stream, socket_addr) = listener.accept()?;
-    println!("Accepted connection from {socket_addr}");
+struct Handler {
+    stream: TcpStream,
+}
+
+async fn handle_connection(mut stream: TcpStream, tx: mpsc::Sender<Event>, mut cmd_rx: mpsc::Receiver<Command>) -> anyhow::Result<()> {
+    // Main event processing loop
+
     let mut buf = vec![0; 1024];
     loop {
-        let n = stream.read(&mut buf)?;
-        if n == 0 {
-            continue;
+        // Use blocking read in the thread
+        match stream.read(&mut buf).await {
+            Ok(n) if n > 0 => {
+                if let Ok(event) = serde_json::from_slice::<Event>(&buf[..n]) {
+                    if tx.send(event).await.is_err() {
+                        break;
+                    }
+                }
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                // No data available, sleep a bit
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            _ => break,
         }
-        if let Ok(event) = serde_json::from_slice::<Event>(&buf[..n]) {
+        if let Some(cmd) = cmd_rx.recv().await {
+            stream.write_all(&serde_json::to_vec(&cmd)?).await;
+        }
+    }
+    Ok(())
+}
+
+fn bootstrap(env: &mut Rt<Env>, cx: &mut Context) -> Result<(), ()> {
+    buffer::get_buffer_create(cx.add("*scratch*"), Some(NIL), cx).unwrap();
+    load("bootstrap.el", cx, env)
+}
+
+pub async fn gui<'a>(env: &mut Rt<Env<'a>>, cx: &mut Context<'a>) -> anyhow::Result<()> {
+
+    let listener = TcpListener::bind("127.0.0.1:26789").await?;
+    println!("GUI server listening on 127.0.0.1:26789");
+
+    let (stream, socket_addr) = listener.accept().await?;
+    println!("Accepted connection from {socket_addr}");
+
+    // Create channel for communication between threads
+    let (tx, mut rx) = mpsc::channel(32);
+    let (cmd_tx, cmd_rx) = mpsc::channel(32);
+
+    // Spawn receiver thread
+    let handle = tokio::spawn(async move {
+        handle_connection(stream, tx.clone(), cmd_rx).await.unwrap();
+    });
+    env.txs.push(cmd_tx);
+
+    loop {
+        env.send_commands().await?;
+        // process events from ui client
+        if let Some(event) = rx.recv().await {
             match event {
                 Event::KeyInput(key) => {
                     println!("Received key input: {:?}", key);
                     let pos = env.current_buffer.get().text.cursor().chars() as u64;
                     let ch = key.key;
                     env.stack.push(cx.add(ch));
+                    // currently just call insert
                     insert(ArgSlice::new(1), env, cx)?;
-                    let content = format!("{}", ch);
-                    let cmd = Command::GridInsert { id: 0, pos, content };
-                    stream.write(&serde_json::to_vec(&cmd)?)?;
+                    // let content = format!("{}", ch);
+                    // let cmd = Command::GridInsert { id: 0, pos, content };
+                    // env.send_command(cmd).await?;
                 }
                 Event::RequestBufferContent { buffer, start, len } => {
                     let buf = env.current_buffer.get();
@@ -48,14 +93,18 @@ pub fn gui(env: &mut Rt<Env>, cx: &mut Context) -> anyhow::Result<()> {
                     let (a, b) = text.slice(start..end);
                     let content = format!("{}{}", a, b);
                     let cmd = Command::GridInsert { id: 0, pos: start as u64, content };
-                    stream.write(&serde_json::to_vec(&cmd)?)?;
+                    env.push_command(cmd);
                 }
                 Event::RequestCursorChange(cursor_change) => {
-                    let command = Command::CursorChange(cursor_change);
-                    let command = serde_json::to_vec(&command).unwrap();
-                    stream.write(&command).unwrap();
+                    // let cmd = Command::CursorChange(cursor_change);
+                }
+                Event::Exit => {
+                    break;
                 }
             }
         }
     }
+
+    handle.await?;
+    Ok(())
 }

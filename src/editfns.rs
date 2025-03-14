@@ -1,10 +1,12 @@
 //! Buffer editing utilities.
 use crate::core::{
     env::{ArgSlice, Env},
+    error::{Type, TypeError},
     gc::{Context, Rt},
     object::{Object, ObjectType},
 };
-use anyhow::{Result, bail, ensure};
+use anyhow::{bail, ensure, Result};
+use rgui_events::Command;
 use rune_macros::defun;
 use std::{fmt::Write as _, io::Write};
 
@@ -84,11 +86,35 @@ fn char_to_string(chr: char) -> String {
 
 #[defun]
 pub(crate) fn insert(args: ArgSlice, env: &mut Rt<Env>, cx: &Context) -> Result<()> {
-    let env = &mut **env; // Deref into rooted type so we can split the borrow
-    let buffer = env.current_buffer.get_mut();
-    let args = Rt::bind_slice(env.stack.arg_slice(args), cx);
+    // let env = &mut **env; // Deref into rooted type so we can split the borrow
+    // let buffer = env.current_buffer.get_mut();
+    // let ptr = env as *mut Rt<Env>;
+    let args = Rt::bind_slice(env.stack.arg_slice(args), cx).to_vec();
+    // let env = unsafe {std::mem::transmute(ptr)};
     for arg in args {
-        buffer.insert(*arg)?;
+        // buffer.insert(*arg)?;
+        general_insert_1(arg, env)?;
+    }
+    Ok(())
+}
+
+fn general_insert_1(arg: Object, env: &mut Rt<Env>) -> Result<()> {
+    let pos = point(env) as u64;
+    let buffer = env.current_buffer.get_mut();
+    match arg.untag() {
+        ObjectType::Int(i) => {
+            let Ok(u_32) = i.try_into() else { bail!("{i} is an invalid char") };
+            let Some(chr) = char::from_u32(u_32) else { bail!("{i} is an Invalid char") };
+            buffer.text.insert_char(chr);
+            let cmd = Command::GridInsert { id: 0, pos, content: format!("{chr}") };
+            env.push_command(cmd);
+        }
+        ObjectType::String(s) => {
+            buffer.text.insert(s);
+            let cmd = Command::GridInsert { id: 0, pos, content: s.to_string() };
+            env.push_command(cmd);
+        }
+        x => bail!(TypeError::new(Type::String, x)),
     }
     Ok(())
 }
@@ -136,6 +162,49 @@ fn bolp(env: &Rt<Env>) -> bool {
 #[defun]
 fn point(env: &Rt<Env>) -> usize {
     env.current_buffer.get().text.cursor().chars()
+}
+
+#[defun]
+pub(crate) fn line_beginning_position(n: Option<usize>, env: &Rt<Env>) -> Result<usize> {
+    let buf = env.current_buffer.get();
+    let mut n = n.unwrap_or(0);
+    let point = buf.text.cursor().chars();
+    let point_min = 1;
+    let mut i = point;
+    while i >= point_min {
+        let ch = buf.text.char_at(i - 1).ok_or(anyhow::anyhow!("no char at point"))?;
+        if ch == '\n' {
+            if n > 0 {
+                n -= 1;
+            } else {
+                break;
+            }
+        }
+        i -= 1;
+    }
+    Ok(i)
+}
+
+#[defun]
+pub(crate) fn line_end_position(n: Option<usize>, env: &Rt<Env>) -> Result<usize> {
+    let buf = env.current_buffer.get();
+    let mut n = n.unwrap_or(0);
+    let point = buf.text.cursor().chars();
+    let point_max = buf.text.len_chars() + 1;
+    let mut i = point;
+    // TODO clarify it
+    while i < point_max {
+        i += 1;
+        let ch = buf.text.char_at(i - 1).ok_or(anyhow::anyhow!("no char at point"))?;
+        if ch == '\n' {
+            if n > 0 {
+                n -= 1;
+            } else {
+                break;
+            }
+        }
+    }
+    Ok(i - 1)
 }
 
 #[defun]

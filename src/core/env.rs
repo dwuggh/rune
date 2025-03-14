@@ -1,8 +1,11 @@
 use super::gc::{Context, ObjectMap, Rto, Slot};
 use super::object::{LispBuffer, Object, OpenBuffer, Symbol, WithLifetime};
-use anyhow::{Result, anyhow};
+use crate::faces::FaceManager;
+use anyhow::{anyhow, Result};
+use rgui_events::Command;
 use rune_macros::Trace;
 use std::cell::OnceCell;
+use std::collections::VecDeque;
 
 mod stack;
 mod symbol_map;
@@ -25,6 +28,12 @@ pub(crate) struct Env<'a> {
     #[no_trace]
     pub(crate) selected_frame: Option<Slot<Object<'a>>>,
     pub(crate) stack: LispStack<'a>,
+    #[no_trace]
+    pub(crate) txs: Vec<tokio::sync::mpsc::Sender<rgui_events::Command>>,
+    #[no_trace]
+    pub(crate) commands: VecDeque<Command>,
+    #[no_trace]
+    pub(crate) faces: FaceManager,
 }
 
 #[derive(Debug)]
@@ -182,5 +191,18 @@ impl<'a> RootedEnv<'a> {
             let mut buffer = buffer.lock()?;
             Ok(func(&mut buffer))
         }
+    }
+
+    pub(crate) async fn send_commands(&mut self) -> Result<()> {
+        while let Some(cmd) = self.commands.pop_front() {
+            for tx in self.txs.iter() {
+                tx.send(cmd.clone()).await?;
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn push_command(&mut self, cmd: rgui_events::Command) {
+        self.commands.push_back(cmd);
     }
 }

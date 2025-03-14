@@ -34,6 +34,7 @@ mod textprops;
 mod threads;
 mod timefns;
 
+mod cmds;
 mod frame;
 mod gui;
 mod window;
@@ -94,7 +95,8 @@ fn main() -> Result<(), ()> {
 
     if args.gui {
         // create UI thread, recv&resp events
-        gui::gui(env, cx).unwrap();
+        let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+        rt.block_on(gui::gui(env, cx)).unwrap();
     }
     Ok(())
 }
