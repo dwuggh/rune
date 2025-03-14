@@ -394,6 +394,7 @@ fn type_of(object: Object) -> Object {
         ObjectType::SubrFn(_) => sym::SUBR.into(),
         ObjectType::Buffer(_) => sym::BUFFER.into(),
         ObjectType::Frame(_) => sym::FRAME.into(),
+        ObjectType::Window(_) => sym::WINDOW.into(),
         ObjectType::CharTable(_) => sym::CHAR_TABLE.into(),
     }
 }
@@ -546,5 +547,6 @@ defsym!(COMPILED_FUNCTION);
 defsym!(HASH_TABLE);
 defsym!(BUFFER);
 defsym!(FRAME);
+defsym!(WINDOW);
 defsym!(SUBR);
 defsym!(CHAR_TABLE);

@@ -1,6 +1,6 @@
 use super::{
     super::gc::{Block, Context},
-    CloneIn, IntoObject, LispVec, ObjCell, display_slice,
+    display_slice, CloneIn, IntoObject, LispVec, ObjCell,
 };
 use super::{Object, WithLifetime};
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
     },
     derive_GcMoveable,
 };
-use anyhow::{Result, bail, ensure};
+use anyhow::{bail, ensure, Result};
 use rune_macros::Trace;
 use std::fmt::{self, Debug, Display};
 
@@ -228,7 +228,7 @@ mod test {
     use super::*;
 
     fn check_arg_spec(spec: i64) {
-        assert_eq!(spec, FnArgs::from_arg_spec(spec).unwrap().into_arg_spec().try_into().unwrap());
+        assert_eq!(spec, FnArgs::from_arg_spec(spec).unwrap().into_arg_spec() as i64);
     }
 
     #[test]

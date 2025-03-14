@@ -1,25 +1,52 @@
+use std::sync::Mutex;
+
 use anyhow::Result;
 use rune_macros::Trace;
 
 use crate::{
-    core::{error::TypeError, gc::{Block, GcHeap, IntoRoot, Slot}},
+    core::{
+        error::TypeError,
+        gc::{Block, GcHeap, IntoRoot, Slot, Trace},
+    },
     derive_GcMoveable,
 };
 
-use super::{Gc, LispFrame, Object, TagType, WithLifetime, NIL};
+use super::{Gc, LispBuffer, LispFrame, NIL, Object, TagType, WithLifetime};
 
 #[derive(PartialEq, Eq, Debug, Trace)]
 pub struct LispWindow(GcHeap<LispWindowInner<'static>>);
 derive_GcMoveable!(LispWindow);
 
-#[derive(Debug, Trace)]
+/// we can impl window in 2 ways: 1 is make window immutable, and every alternation
+/// creates a new window; the 2nd approach, just store them in a struct.
+#[derive(Debug)]
 pub struct LispWindowInner<'ob> {
     id: u64,
+    parent_frame: &'ob LispFrame,
+    // config: Mutex<WindowData<'ob>>,
+    // parent_frame: Slot<Object<'ob>>,
+}
+
+impl Trace for LispWindowInner<'_> {
+    fn trace(&self, _state: &mut crate::core::gc::GcState) {
+        // no need to trace here
+    }
+}
+
+#[derive(Debug, Trace, Clone)]
+pub(crate) struct WindowData<'ob> {
     #[no_trace]
-    config: WindowConfig,
-    buffer: Slot<Object<'ob>>,
-    params: Slot<Object<'ob>>,
-    parent_frame: Slot<Object<'ob>>,
+    pub(crate) config: WindowConfig,
+    pub(crate) params: Slot<Object<'ob>>,
+    #[no_trace]
+    pub(crate) buffer: &'ob LispBuffer,
+}
+
+impl<'ob> WindowData<'ob> {
+    pub fn new(params: Slot<Object<'ob>>, buffer: &'ob LispBuffer) -> Self {
+        let config = WindowConfig::new();
+        Self { config, params, buffer }
+    }
 }
 
 impl<'ob> PartialEq for LispWindowInner<'ob> {
@@ -39,30 +66,32 @@ impl<'new> LispWindow {
 }
 
 impl LispWindow {
-    pub(crate) fn new(
-        id: u64,
-        buffer: Slot<Object>,
-        frame: Slot<Object>,
-        params: Object,
-    ) -> Self {
-        let config = WindowConfig::new();
-        let params = unsafe { params.into_root() };
-        let buffer = unsafe { buffer.with_lifetime() };
-        let frame = unsafe { frame.with_lifetime() };
-        let new = LispWindowInner { id, config, buffer, params, parent_frame: frame };
+    pub(crate) fn new(id: u64, parent_frame: &LispFrame) -> Self {
+        let parent_frame = unsafe { parent_frame.with_lifetime() };
+        let new = LispWindowInner { id, parent_frame };
         Self(GcHeap::new(new, true))
     }
 
-    pub(crate) fn get_frame(&self) -> Result<&LispFrame> {
-        let frame = *self.0.parent_frame;
-        match frame.untag() {
-            super::ObjectType::Frame(f) => Ok(f),
-            _ => Err(TypeError::new(crate::core::error::Type::Frame, frame).into())
-        }
+    pub(crate) fn get_frame(&self) -> &LispFrame {
+        let frame = self.0.parent_frame;
+        frame
+    }
+
+    pub(crate) fn id(&self) -> u64 {
+        self.0.id
+    }
+
+    pub(crate) fn data(&self) -> Option<WindowData<'static>> {
+        let guard = self.get_frame().data();
+        let c = guard.components.get(&self.id());
+        c.and_then(|c| match &c.data {
+            super::ComponentData::Window(w) => Some(w.clone()),
+            _ => None,
+        })
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct WindowConfig {
     /// A marker pointing to where in the text to start displaying.
     disp_start: u64,

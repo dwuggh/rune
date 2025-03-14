@@ -1405,7 +1405,6 @@ impl<'ob> TryFrom<Object<'ob>> for Gc<&'ob LispWindow> {
     }
 }
 
-
 impl<'ob> TryFrom<Object<'ob>> for Gc<&'ob CharTable> {
     type Error = TypeError;
 

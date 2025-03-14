@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::{cell::RefCell, sync::Mutex};
+use std::sync::Mutex;
 
 use rune_macros::Trace;
 
@@ -10,7 +10,7 @@ use crate::{
     frame::FrameConfig,
 };
 
-use super::{Gc, LispWindow, Object, TagType, WithLifetime, NIL};
+use super::{Gc, LispWindow, NIL, Object, TagType, WindowData, WithLifetime};
 
 #[derive(PartialEq, Eq, Debug, Trace)]
 pub struct LispFrame(GcHeap<LispFrameInner<'static>>);
@@ -18,18 +18,57 @@ derive_GcMoveable!(LispFrame);
 
 #[derive(Debug)]
 pub struct LispFrameInner<'ob> {
-    frame: Mutex<FrameConfig>,
-    params: Slot<Object<'ob>>,
-    // parent: Option<Object<'ob>>,
-    windows: HashMap<u64, Slot<Object<'ob>>>
+    data: Mutex<FrameData<'ob>>,
+}
+
+#[derive(Debug)]
+pub enum ComponentData<'ob> {
+    Window(WindowData<'ob>),
+    Modeline,
+    Bar,
+}
+
+#[derive(Debug)]
+pub(crate) struct Component<'ob> {
+    pub(crate) id: u64,
+    pub(crate) data: ComponentData<'ob>,
+}
+
+impl Trace for Component<'_> {
+    fn trace(&self, state: &mut crate::core::gc::GcState) {
+        match &self.data {
+            ComponentData::Window(window_data) => window_data.trace(state),
+            _ => (),
+        }
+    }
+}
+
+impl<'new> IntoRoot<Component<'new>> for Component<'_> {
+    unsafe fn into_root(self) -> Component<'new> {
+        let result: Component<'new> = std::mem::transmute(self);
+        result
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct FrameData<'ob> {
+    pub(crate) config: FrameConfig,
+    pub(crate) params: Slot<Object<'ob>>,
+    pub(crate) components: HashMap<u64, Component<'ob>>,
+}
+
+impl Trace for FrameData<'_> {
+    fn trace(&self, state: &mut crate::core::gc::GcState) {
+        self.params.trace(state);
+        for (_id, data) in self.components.iter() {
+            data.trace(state);
+        }
+    }
 }
 
 impl Trace for LispFrameInner<'_> {
     fn trace(&self, state: &mut crate::core::gc::GcState) {
-        self.params.trace(state);
-        for (_, w) in self.windows.iter() {
-            w.trace(state);
-        }
+        self.data.lock().unwrap().trace(state);
     }
 }
 
@@ -47,7 +86,6 @@ impl<'new> WithLifetime<'new> for LispFrameInner<'_> {
     }
 }
 
-
 impl<'ob> PartialEq for LispFrameInner<'ob> {
     fn eq(&self, other: &Self) -> bool {
         std::ptr::eq(self, other)
@@ -56,9 +94,16 @@ impl<'ob> PartialEq for LispFrameInner<'ob> {
 
 // FIXME is Slot<Object> thread-safe?
 unsafe impl Sync for LispFrameInner<'_> {}
-unsafe impl Send for LispFrameInner<'_> {}
 
 impl Eq for LispFrameInner<'_> {}
+
+impl<'ob> FrameData<'ob> {
+    fn new(config: FrameConfig, params: Slot<Object<'ob>>) -> Self {
+        let windows = HashMap::new();
+        // let id = config.layout.main;
+        Self { config, params, components: windows }
+    }
+}
 
 impl<'new> LispFrame {
     pub(in crate::core) fn clone_in<const C: bool>(
@@ -70,10 +115,10 @@ impl<'new> LispFrame {
 }
 
 impl<'ob> LispFrameInner<'ob> {
-    pub fn new(f: FrameConfig, params: Slot<Object<'ob>>) -> Self {
-        let frame = Mutex::new(f);
-        let windows = HashMap::new();
-        LispFrameInner { frame, params, windows }
+    pub fn new(config: FrameConfig, params: Slot<Object<'ob>>) -> Self {
+        let data = FrameData::new(config, params);
+        let data = Mutex::new(data);
+        LispFrameInner { data }
     }
 }
 
@@ -84,7 +129,6 @@ impl LispFrame {
         block: &'ob Block<true>,
     ) -> &'ob Self {
         let frame = unsafe { Self::new(frame, params, true) };
-        let window = LispWindow::new(id, buffer, frame, NIL);
         block.objects.alloc(frame)
     }
 
@@ -95,11 +139,8 @@ impl LispFrame {
         Self(new)
     }
 
-    pub fn data(&self) -> std::sync::MutexGuard<'_, FrameConfig> {
-        self.0.frame.lock().unwrap()
-    }
-
-    pub fn params(&self) -> Object {
-        self.0.params.as_obj()
+    pub fn data(&self) -> std::sync::MutexGuard<'_, FrameData<'static>> {
+        let guard = self.0.data.lock().unwrap();
+        guard
     }
 }

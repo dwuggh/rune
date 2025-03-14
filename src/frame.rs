@@ -22,12 +22,12 @@
 use std::sync::{LazyLock, Mutex};
 
 use crate::{
-    core::{
-        env::{intern, Env, INTERNED_SYMBOLS},
-        gc::{Context, IntoRoot, Rt, Slot},
-        object::{LispFrame, Object, ObjectType, Symbol, WindowConfig, WithLifetime, NIL},
-    },
     Gc,
+    core::{
+        env::{Env, INTERNED_SYMBOLS, intern},
+        gc::{Context, IntoRoot, Rt, Slot},
+        object::{LispFrame, NIL, Object, ObjectType, Symbol, WindowConfig, WithLifetime},
+    },
 };
 use anyhow::Result;
 use rune_core::{hashmap::HashMap, macros::list};
@@ -299,7 +299,7 @@ fn frame_geometry<'ob>(
             })
     {
         let data = f.data();
-        let outpos = data.layout.get(data.layout.root)?;
+        let outpos = data.config.layout.get(data.config.layout.root)?;
         let outer_position = list!(intern("outer-position", cx),
             outpos.location.x as i64,
             outpos.location.y as i64,
