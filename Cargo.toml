@@ -59,10 +59,9 @@ bumpalo = { version = "3.15.3", features = ["collections"] }
 libc = "0.2.153"
 base64 = "0.22.1"
 interval-tree = { workspace = true }
-rgui-events ={ path = "../rgui/rgui-events" }
+rune-gui = { path = "../rune-gui/rune-gui" }
 face-types ={ workspace = true }
 taffy = "0.7.7"
-tokio = { version = "1", features = ["full"] }
 
 # [dev-dependencies]
 # backtrace-on-stack-overflow = "0.3.0"

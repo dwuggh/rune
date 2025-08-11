@@ -11,7 +11,7 @@ use crate::{
     derive_GcMoveable,
 };
 
-use super::{Gc, LispBuffer, LispFrame, NIL, Object, TagType, WithLifetime};
+use super::{Gc, LispBuffer, LispFrame, Object, TagType, WithLifetime, NIL};
 
 #[derive(PartialEq, Eq, Debug, Trace)]
 pub struct LispWindow(GcHeap<LispWindowInner<'static>>);
@@ -19,7 +19,7 @@ derive_GcMoveable!(LispWindow);
 
 /// we can impl window in 2 ways: 1 is make window immutable, and every alternation
 /// creates a new window; the 2nd approach, just store them in a struct.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct LispWindowInner<'ob> {
     id: u64,
     parent_frame: &'ob LispFrame,
@@ -39,13 +39,25 @@ pub(crate) struct WindowData<'ob> {
     pub(crate) config: WindowConfig,
     pub(crate) params: Slot<Object<'ob>>,
     #[no_trace]
-    pub(crate) buffer: &'ob LispBuffer,
+    pub(crate) buffer: Option<&'ob LispBuffer>,
 }
 
 impl<'ob> WindowData<'ob> {
-    pub fn new(params: Slot<Object<'ob>>, buffer: &'ob LispBuffer) -> Self {
+    pub fn new(params: Slot<Object<'ob>>) -> Self {
         let config = WindowConfig::new();
-        Self { config, params, buffer }
+        Self { config, params, buffer: None }
+    }
+
+    /// return whether the buffer is changed
+    pub(crate) fn set_buffer(&mut self, new_buffer: &'ob LispBuffer) -> bool {
+        let mut changed = true;
+        if let Some(old) = self.buffer {
+            if old == new_buffer {
+                changed = false;
+            }
+        }
+        self.buffer = Some(new_buffer);
+        return changed;
     }
 }
 
@@ -88,6 +100,16 @@ impl LispWindow {
             super::ComponentData::Window(w) => Some(w.clone()),
             _ => None,
         })
+    }
+
+    pub(crate) fn modify_data<T>(&self, mod_fn: impl Fn(&mut WindowData) -> T) -> Option<T> {
+        let mut guard = self.get_frame().data();
+        println!("asdadfsf");
+        let Some(c) = guard.components.get_mut(&self.id()) else { return None};
+        match &mut c.data {
+            super::ComponentData::Window(w) => Some(mod_fn(w)),
+            _ => None,
+        }
     }
 }
 

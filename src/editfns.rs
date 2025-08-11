@@ -6,7 +6,6 @@ use crate::core::{
     object::{Object, ObjectType},
 };
 use anyhow::{bail, ensure, Result};
-use rgui_events::Command;
 use rune_macros::defun;
 use std::{fmt::Write as _, io::Write};
 
@@ -106,16 +105,13 @@ fn general_insert_1(arg: Object, env: &mut Rt<Env>) -> Result<()> {
             let Ok(u_32) = i.try_into() else { bail!("{i} is an invalid char") };
             let Some(chr) = char::from_u32(u_32) else { bail!("{i} is an Invalid char") };
             buffer.text.insert_char(chr);
-            let cmd = Command::GridInsert { id: 0, pos, content: format!("{chr}") };
-            env.push_command(cmd);
         }
         ObjectType::String(s) => {
             buffer.text.insert(s);
-            let cmd = Command::GridInsert { id: 0, pos, content: s.to_string() };
-            env.push_command(cmd);
         }
         x => bail!(TypeError::new(Type::String, x)),
     }
+    // TODO
     Ok(())
 }
 

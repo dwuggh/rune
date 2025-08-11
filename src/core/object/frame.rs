@@ -10,7 +10,7 @@ use crate::{
     frame::FrameConfig,
 };
 
-use super::{Gc, LispWindow, NIL, Object, TagType, WindowData, WithLifetime};
+use super::{Gc, LispWindow, Object, TagType, WindowData, WithLifetime, NIL};
 
 #[derive(PartialEq, Eq, Debug, Trace)]
 pub struct LispFrame(GcHeap<LispFrameInner<'static>>);
@@ -47,6 +47,13 @@ impl<'new> IntoRoot<Component<'new>> for Component<'_> {
     unsafe fn into_root(self) -> Component<'new> {
         let result: Component<'new> = std::mem::transmute(self);
         result
+    }
+}
+
+impl<'ob> Component<'ob> {
+    fn new_window(id: u64, params: Slot<Object<'ob>>) -> Self {
+        let data = ComponentData::Window(WindowData::new(params));
+        Self { id, data }
     }
 }
 
@@ -99,9 +106,13 @@ impl Eq for LispFrameInner<'_> {}
 
 impl<'ob> FrameData<'ob> {
     fn new(config: FrameConfig, params: Slot<Object<'ob>>) -> Self {
-        let windows = HashMap::new();
+        let mut components = HashMap::new();
+        // TODO should make all windows in config
+        let id = config.selected_window;
+        // TODO determine window params
+        components.insert(id, Component::new_window(id, params.clone()));
         // let id = config.layout.main;
-        Self { config, params, components: windows }
+        Self { config, params, components }
     }
 }
 
@@ -142,5 +153,18 @@ impl LispFrame {
     pub fn data(&self) -> std::sync::MutexGuard<'_, FrameData<'static>> {
         let guard = self.0.data.lock().unwrap();
         guard
+    }
+
+    pub(crate) fn selected_window(&self) -> LispWindow {
+        let guard = self.data();
+        let id = guard.config.selected_window;
+        LispWindow::new(id, self)
+    }
+
+    pub(crate) fn set_selected_window(&self, id: u64) {
+        let mut guard = self.data();
+        if guard.components.get(&id).is_some() {
+            guard.config.selected_window = id;
+        }
     }
 }

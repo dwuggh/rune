@@ -58,7 +58,7 @@
 ;; autoloaded when bootstrapping or running Emacs normally.
 ;; This is because PATH_DUMPLOADSEARCH is just "../lisp".
 (if (or (member dump-mode '("bootstrap" "pbootstrap"))
-	;; FIXME this is irritatingly fragile.
+        ;; FIXME this is irritatingly fragile.
         (and (stringp (nth 4 command-line-args))
              (string-match "^unidata-gen\\(\\.elc?\\)?$"
                            (nth 4 command-line-args)))
@@ -168,7 +168,7 @@
 
 (load "cus-face")
 ;; RUNE-BOOTSTRAP
-;; (load "faces")  ; after here, `defface' may be used.
+(load "faces")  ; after here, `defface' may be used.
 
 ;; RUNE-BOOTSTRAP
 (load "stubs")
@@ -428,19 +428,19 @@ lost after dumping")))
                (fboundp 'dump-emacs))
           (and (equal dump-mode "pdump")
                (fboundp 'dump-emacs-portable)))
-	 (not (eq system-type 'ms-dos)))
+         (not (eq system-type 'ms-dos)))
     (let* ((base (concat "emacs-" emacs-version "."))
-	   (exelen (if (eq system-type 'windows-nt) -4))
-	   (files (file-name-all-completions base default-directory))
-	   (versions (mapcar (lambda (name)
+           (exelen (if (eq system-type 'windows-nt) -4))
+           (files (file-name-all-completions base default-directory))
+           (versions (mapcar (lambda (name)
                                (string-to-number
                                 (substring name (length base) exelen)))
-			     files)))
+                             files)))
       (setq emacs-repository-version (ignore-errors (emacs-repository-get-version))
             emacs-repository-branch (ignore-errors (emacs-repository-get-branch)))
       ;; A constant, so we shouldn't change it with `setq'.
       (defconst emacs-build-number
-	(if versions (1+ (apply #'max versions)) 1))))
+        (if versions (1+ (apply #'max versions)) 1))))
 
 
 (message "Finding pointers to doc strings...")
@@ -518,7 +518,7 @@ lost after dumping")))
                                             eln-dest-dir)))
                    (native-comp-unit-set-file
                     cu
-	            (cons
+                    (cons
                      ;; Relative filename from the installed binary.
                      (file-relative-name (expand-file-name
                                           (file-name-nondirectory
@@ -527,7 +527,7 @@ lost after dumping")))
                                          bin-dest-dir)
                      ;; Relative filename from the built uninstalled binary.
                      (file-relative-name file invocation-directory)))))
-	       comp-loaded-comp-units-h)))
+               comp-loaded-comp-units-h)))
   ;; Set up the mechanism to allow inhibiting native-comp via
   ;; file-local variables.
   (defvar comp--no-native-compile (make-hash-table :test #'equal)))
@@ -627,7 +627,7 @@ lost after dumping")))
 ;; So run the startup code now.  First, remove `-l loadup' from args.
 
 (if (and (member (nth 1 command-line-args) '("-l" "--load"))
-	 (equal (nth 2 command-line-args) "loadup"))
+         (equal (nth 2 command-line-args) "loadup"))
     (setcdr command-line-args (nthcdr 3 command-line-args)))
 
 ;; Don't keep `load-file-name' set during the top-level session!

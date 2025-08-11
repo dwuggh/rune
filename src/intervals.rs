@@ -38,7 +38,7 @@ impl<'new> WithLifetime<'new> for IntervalTree<'_> {
     }
 }
 
-unsafe impl Send for IntervalTree<'_> {}
+unsafe impl Send for IntervalTree<'_> {} // TODO
 
 impl<'ob> IntervalTree<'ob> {
     pub fn new() -> Self {

@@ -22,12 +22,11 @@
 use std::sync::{LazyLock, Mutex};
 
 use crate::{
-    Gc,
-    core::{
-        env::{Env, INTERNED_SYMBOLS, intern},
+    alloc::list, core::{
+        env::{intern, Env, INTERNED_SYMBOLS},
         gc::{Context, IntoRoot, Rt, Slot},
-        object::{LispFrame, NIL, Object, ObjectType, Symbol, WindowConfig, WithLifetime},
-    },
+        object::{LispFrame, Object, ObjectType, Symbol, WindowConfig, WithLifetime, NIL},
+    }, Gc
 };
 use anyhow::Result;
 use rune_core::{hashmap::HashMap, macros::list};
@@ -211,13 +210,14 @@ impl FrameLayout {
 impl FrameConfig {
     pub fn new(width: f32, height: f32) -> Self {
         let layout = FrameLayout::new(width, height);
+        let selected_window = layout.main.into();
         Self {
             name: String::new(),
             frame_id: 0,
             parent: None,
             layout,
             windows: HashMap::default(),
-            selected_window: 0,
+            selected_window,
             cursor_pos: 0,
             left: 0.,
             top: 0.,
@@ -243,7 +243,7 @@ fn window_system<'ob>(frame: Object<'ob>, cx: &'ob Context<'ob>) -> Object<'ob> 
 
 #[defun]
 pub fn make_terminal_frame<'ob>(
-    parameters: Option<Object>,
+    parameters: Object,
     cx: &'ob Context,
     env: &mut Rt<Env>,
 ) -> Result<Object<'ob>> {
@@ -256,12 +256,12 @@ pub fn make_terminal_frame<'ob>(
     let frame = FrameConfig::new(width, height);
     let lispframe: &'static LispFrame = {
         let global = INTERNED_SYMBOLS.lock().unwrap();
-        let params = Slot::new(parameters.unwrap_or(NIL));
+        let params = Slot::new(parameters);
         let lispframe = LispFrame::create(frame, params, global.global_block());
         unsafe { &*(lispframe as *const LispFrame) }
     };
 
-    FRAMES.lock().unwrap().insert(String::new(), lispframe).unwrap();
+    FRAMES.lock().unwrap().insert(String::new(), lispframe);
     let result = cx.add(lispframe);
     Ok(result)
 }
@@ -273,7 +273,7 @@ fn select_frame(frame: Object, _norecord: Option<bool>, env: &mut Rt<Env>) {
 }
 
 #[defun]
-fn selected_frame<'ob>(env: &'ob Rt<Env>) -> Object<'ob> {
+pub(crate) fn selected_frame<'ob>(env: &'ob Rt<Env>) -> Object<'ob> {
     env.selected_frame
         .as_ref()
         .map(|f| unsafe { (**f).with_lifetime() })
@@ -353,4 +353,13 @@ fn as_frame(object: Object) -> Option<&LispFrame> {
         ObjectType::Frame(f) => Some(f),
         _ => None,
     }
+}
+
+defvar!(INHIBIT_X_RESOURCES);
+defvar!(MINIBUFFER_PROMPT_PROPERTIES, list![""]);
+
+#[defun]
+fn frame_list<'ob>(env: &Rt<Env>, cx: &'ob Context) -> Object<'ob> {
+    let frames: Vec<Object> = FRAMES.lock().unwrap().values().map(|x| cx.add(*x)).collect();
+    return list(&frames, cx)
 }
