@@ -7,8 +7,8 @@ use render::frame_layout::FrameLayout;
 use render::FaceMap;
 use rune_macros::Trace;
 
-use crate::core::env::intern;
-use crate::core::gc::{Context, IntoRoot};
+use crate::core::env::{intern, Env};
+use crate::core::gc::{Context, IntoRoot, Rt};
 use crate::core::object::ObjectType;
 use crate::derive_GcMoveable;
 use crate::intervals::textget;
@@ -183,18 +183,22 @@ impl LispFrame {
     }
 
     pub fn data(&self) -> std::sync::MutexGuard<'_, FrameData<'static>> {
+        println!("calling data");
         let guard = self.0.data.lock().unwrap();
         guard
     }
 
-    pub fn viewmodel(&self, cx: &Context) -> render::viewmodel::ViewModel {
+    pub fn viewmodel(&self, env: &Rt<Env>, cx: &Context) -> render::viewmodel::ViewModel {
         let lock = self.data();
+
+        println!("A");
         // lock.config;
         // lock.components.
         let windows = lock.components.iter().map(|(id, c)| {
             match &c.data {
                 ComponentData::Window(window_data) => {
-                    let mut buf = window_data.buffer.as_ref().unwrap().lock().unwrap();
+                    // let mut buf = window_data.buffer.as_ref().unwrap().lock().unwrap();
+                    let buf = env.current_buffer.get();
                     let content = buf.get().text.to_string();
                     let tree = buf.textprops_with_lifetime();
                     let iter  = tree.iter(0, 10000);
@@ -219,8 +223,9 @@ impl LispFrame {
                 ComponentData::Bar => todo!(),
             }
 
-        });
-        lock.config.layout.gen_viewmodel(lock.config.face_map.clone(), windows)
+        }).collect::<Vec<_>>();
+        let face_map = lock.config.face_map.clone();
+        lock.config.layout.gen_viewmodel(face_map, windows.into_iter())
     }
 
     pub(crate) fn selected_window(&self) -> LispWindow {

@@ -4,7 +4,7 @@ use rune_macros::defun;
 use crate::{core::env::ArgSlice, editfns::{insert, line_beginning_position, point_min}, Context, Env, Rt};
 
 #[defun]
-fn self_insert_command(n: usize, c: char, env: &mut Rt<Env>, cx: &Context) -> Result<()> {
+pub fn self_insert_command(n: usize, c: char, env: &mut Rt<Env>, cx: &Context) -> Result<()> {
     let c = cx.add(c);
     let buf = env.current_buffer.get_mut();
     for _ in 0..n {

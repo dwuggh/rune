@@ -55,7 +55,7 @@ fn set_window_buffer<'ob>(
     // println!("{buffer_or_name:?}");
     w.modify_data(|data| data.set_buffer(buf));
     println!("{buffer_or_name:?}");
-    todo!();
+    // todo!();
     Ok(())
 }
 

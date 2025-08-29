@@ -211,7 +211,7 @@ pub fn put_text_property<'ob>(
     let prop = list!(property, value; cx);
     let prop = Slot::new(prop);
     modify_buffer_data(object, env, |data| {
-        let tree = &mut data.textprops_with_lifetime();
+        let tree = &mut data.textprops_with_lifetime_mut();
         tree.insert(start, end, prop, cx);
         Ok(())
     })
@@ -239,7 +239,7 @@ pub fn next_property_change<'ob>(
     modify_buffer_data(object, env, |data| -> Result<Object<'ob>> {
         let point_max = data.text.len_chars() + 1;
         let end = limit.unwrap_or(point_max);
-        let tree = data.textprops_with_lifetime();
+        let tree = data.textprops_with_lifetime_mut();
         // NOTE this can be optimized
         tree.clean();
         let prop = tree.tree.find_intersect_min(position..end);
@@ -293,7 +293,7 @@ pub fn next_single_property_change<'ob>(
     modify_buffer_data(object, env, |data| -> Result<Object<'ob>> {
         let point_max = data.text.len_chars() + 1;
         let end = limit.unwrap_or(point_max);
-        let tree = data.textprops_with_lifetime();
+        let tree = data.textprops_with_lifetime_mut();
         // NOTE this can be optimized
         tree.clean();
         let iter = tree.iter(position, end);
@@ -340,7 +340,7 @@ pub fn previous_property_change<'ob>(
         let point_min = 1;
         let start = limit.unwrap_or(point_min);
         let end = position;
-        let tree = data.textprops_with_lifetime();
+        let tree = data.textprops_with_lifetime_mut();
         // NOTE this can be optimized
         tree.clean();
         let prop = tree.tree.find_intersect_max(start..end);
@@ -398,7 +398,7 @@ pub fn previous_single_property_change<'ob>(
     modify_buffer_data(object, env, |data| -> Result<Object<'ob>> {
         let point_min = 1;
         let start = limit.unwrap_or(point_min);
-        let tree = data.textprops_with_lifetime();
+        let tree = data.textprops_with_lifetime_mut();
         // NOTE this can be optimized
         tree.clean();
         let iter = tree.iter_reverse(start, position);
@@ -437,7 +437,7 @@ pub fn set_text_properties<'ob>(
     env: &mut Rt<Env>,
 ) -> Result<()> {
     modify_buffer_data(object, env, |data| -> Result<()> {
-        let tree = data.textprops_with_lifetime();
+        let tree = data.textprops_with_lifetime_mut();
         tree.set_properties(start, end, properties);
         Ok(())
     })
@@ -463,7 +463,7 @@ pub fn remove_text_properties<'ob>(
     cx: &'ob Context,
 ) -> Result<()> {
     modify_buffer_data(object, env, |data| -> Result<()> {
-        let tree = data.textprops_with_lifetime();
+        let tree = data.textprops_with_lifetime_mut();
         tree.delete(start, end, list![properties; cx])
     })
 }
@@ -483,7 +483,7 @@ pub fn remove_list_of_text_properties<'ob>(
     env: &mut Rt<Env>,
 ) -> Result<()> {
     modify_buffer_data(object, env, |data| -> Result<()> {
-        let tree = data.textprops_with_lifetime();
+        let tree = data.textprops_with_lifetime_mut();
         tree.delete(start, end, list_of_properties)
     })
 }
@@ -505,7 +505,7 @@ pub fn text_properties_any<'ob>(
     cx: &'ob Context,
 ) -> Result<Object<'ob>> {
     modify_buffer_data(object, env, |data| -> Result<Object<'ob>> {
-        let tree = data.textprops_with_lifetime();
+        let tree = data.textprops_with_lifetime_mut();
         let iter = tree.iter(start, end);
         for (interval, props) in iter {
             let val = textget(props, property)?;
@@ -534,7 +534,7 @@ pub fn text_properties_not_all<'ob>(
     cx: &'ob Context,
 ) -> Result<Object<'ob>> {
     modify_buffer_data(object, env, |data| -> Result<Object<'ob>> {
-        let tree = data.textprops_with_lifetime();
+        let tree = data.textprops_with_lifetime_mut();
         let iter = tree.iter(start, end);
         for (interval, props) in iter {
             let val = textget(props, property)?;

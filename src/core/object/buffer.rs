@@ -117,8 +117,12 @@ pub(crate) struct BufferData {
 }
 
 impl BufferData {
-    pub fn textprops_with_lifetime<'new>(&mut self) -> &mut IntervalTree<'new> {
+    pub fn textprops_with_lifetime_mut<'new>(&mut self) -> &mut IntervalTree<'new> {
         unsafe { std::mem::transmute(&mut self.textprops) }
+    }
+
+    pub fn textprops_with_lifetime<'new>(&self) -> &IntervalTree<'new> {
+        unsafe { std::mem::transmute(&self.textprops) }
     }
 }
 

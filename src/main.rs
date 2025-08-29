@@ -37,6 +37,9 @@ mod frame;
 mod window;
 mod cmds;
 mod faces;
+mod gui;
+
+use gui::gui;
 
 use crate::core::{
     env::{Env, intern, sym},
@@ -59,6 +62,8 @@ struct Args {
     no_bootstrap: bool,
     #[arg(long)]
     eval_stdin: bool,
+    #[arg(long)]
+    gui: bool,
 }
 
 fn main() -> Result<(), ()> {
@@ -87,6 +92,10 @@ fn main() -> Result<(), ()> {
 
     if args.repl {
         repl(env, cx);
+    }
+
+    if args.gui {
+        gui(env, cx).unwrap();
     }
     Ok(())
 }

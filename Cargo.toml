@@ -63,6 +63,7 @@ num-integer = "0.1.46"
 libm = "0.2.11"
 interval-tree = { workspace = true }
 render = { workspace = true }
+rune-gui = { path = "../rune-gui/rune-gui" }
 
 [dev-dependencies]
 proptest = "1.7.0"
