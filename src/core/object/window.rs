@@ -1,5 +1,6 @@
-use std::fmt::Display;
+use std::{fmt::Display, sync::Arc};
 
+use render::viewmodel::WindowContent;
 use rune_macros::Trace;
 
 use crate::{
@@ -38,6 +39,8 @@ pub(crate) struct WindowData<'ob> {
     pub(crate) config: WindowConfig,
     pub(crate) params: Slot<Object<'ob>>,
     #[no_trace]
+    pub window_content: Arc<WindowContent>,
+    #[no_trace]
     pub(crate) buffer: Option<&'ob LispBuffer>,
 }
 
@@ -61,6 +64,7 @@ pub struct WindowConfig {
     /// used in line-number-mode, ignore for now
     base_line_number: u64,
     base_line_pos: u64,
+
 }
 
 impl<'ob> PartialEq for LispWindowInner<'ob> {
@@ -125,7 +129,8 @@ impl LispWindow {
 impl<'ob> WindowData<'ob> {
     pub fn new(params: Slot<Object<'ob>>) -> Self {
         let config = WindowConfig::new();
-        Self { config, params, buffer: None }
+        let window_content = Default::default();
+        Self { config, params, buffer: None, window_content }
     }
 
     /// return whether the buffer is changed

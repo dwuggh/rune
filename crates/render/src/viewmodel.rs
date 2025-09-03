@@ -48,7 +48,13 @@ pub enum WindowContent {
     TextBuffer(TextBuffer),
 }
 
-#[derive(Clone, Debug)]
+impl Default for WindowContent {
+    fn default() -> Self {
+        WindowContent::TextBuffer(TextBuffer::default())
+    }
+}
+
+#[derive(Clone, Debug, Default)]
 pub struct TextBuffer {
     pub text: String,
     pub spans: Vec<(std::ops::Range<usize>, FaceName)>,

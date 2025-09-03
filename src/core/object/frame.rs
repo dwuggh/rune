@@ -189,35 +189,47 @@ impl LispFrame {
     }
 
     pub fn viewmodel(&self, env: &Rt<Env>, cx: &Context) -> render::viewmodel::ViewModel {
-        let lock = self.data();
+        let mut lock = self.data();
 
-        println!("A");
+        println!("building viewmodel...");
         // lock.config;
         // lock.components.
-        let windows = lock.components.iter().map(|(id, c)| {
-            match &c.data {
+        let windows = lock.components.iter_mut().map(|(id, c)| {
+            match &mut c.data {
                 ComponentData::Window(window_data) => {
                     // let mut buf = window_data.buffer.as_ref().unwrap().lock().unwrap();
                     let buf = env.current_buffer.get();
+                    // env.with_buffer(window_data.buffer, func);
                     let content = buf.get().text.to_string();
+                    println!("building viewmodel: content: {content}");
                     let tree = buf.textprops_with_lifetime();
                     let iter  = tree.iter(0, 10000);
-                    let spans = iter.map(|(range, prop_list)| {
+                    let spans = iter.filter_map(|(range, prop_list)| {
                         let face = cx.add(intern("face", cx));
                         let face = textget(prop_list, face).unwrap();
+                        if prop_list.is_nil() {
+                            return None;
+                        }
+                        println!("range: {range:?}, props: {prop_list:?}, face: {face:?}");
                         let s = if let ObjectType::Symbol(s) = face.untag() {
                             s.to_string()
                             
                         } else {
-                            "default".to_string()
+                            return None;
+                            // "default".to_string()
                         };
-                        (range, s)
+                        Some((range, s))
                     }).collect();
+                    println!("spans: {spans:?}");
                     let window_content = WindowContent::TextBuffer(TextBuffer {
                         text: content,
                         spans,
                     });
-                    ((*id).into(), Arc::new(window_content))
+                    let wc = &mut window_data.window_content;
+                    let wc = Arc::make_mut(wc);
+                    *wc = window_content;
+                    
+                    ((*id).into(), window_data.window_content.clone())
                 },
                 ComponentData::Modeline => todo!(),
                 ComponentData::Bar => todo!(),
